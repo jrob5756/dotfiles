@@ -14,6 +14,8 @@ See `lua/plugins/astrocore.lua` (core options/mappings/autocmds), `lua/plugins/n
 
 ## 🛠️ Installation on a new machine
 
+See the top-level [`../README.md`](../README.md) for the full cross-platform setup guide. In short, for this tool specifically:
+
 #### Back up any existing Neovim config/state (only needed if migrating from another setup)
 
 ```shell
@@ -23,18 +25,18 @@ mv ~/.local/state/nvim ~/.local/state/nvim.bak
 mv ~/.cache/nvim ~/.cache/nvim.bak
 ```
 
-#### Clone this repo into the Neovim config location
+#### Symlink this folder into the Neovim config location
 
 macOS/Linux:
 
 ```shell
-git clone https://github.com/jrob5756/nvim ~/.config/nvim
+ln -s ~/dotfiles/nvim ~/.config/nvim
 ```
 
-Windows (PowerShell):
+Windows (PowerShell) — symlinks need Developer Mode enabled; without it, clone/copy the whole `dotfiles` repo and copy this folder's contents into `%LOCALAPPDATA%\nvim` instead:
 
 ```powershell
-git clone https://github.com/jrob5756/nvim $env:LOCALAPPDATA\nvim
+New-Item -ItemType SymbolicLink -Path "$env:LOCALAPPDATA\nvim" -Target "$env:USERPROFILE\dotfiles\nvim"
 ```
 
 #### Start Neovim
