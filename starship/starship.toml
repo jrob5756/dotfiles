@@ -1,0 +1,27 @@
+# Starship - Minimal with left border
+command_timeout = 1000
+add_newline = true
+
+format = """
+[┌──](#6C7A96) $directory$git_branch$git_status
+[│](#6C7A96)
+[└─](#6C7A96) $character"""
+
+[directory]
+style = "bold #A3C4E0"
+format = "[$path ]($style)"
+truncation_length = 3
+truncation_symbol = "\u2026/"
+
+[git_branch]
+symbol = "\ue725"
+style = "bold #5EC4FF"
+format = "[$symbol $branch ]($style)"
+
+[git_status]
+style = "bold #EC6A77"
+format = "[$all_status$ahead_behind]($style)"
+
+[character]
+success_symbol = "[\u276f](bold #B5D99C)"
+error_symbol = "[\u276f](bold #EC6A77)"
