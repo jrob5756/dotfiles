@@ -18,7 +18,14 @@ mkdir -p ~/.config
 ln -s ~/dotfiles/starship/starship.toml ~/.config/starship.toml
 ```
 
-Windows (PowerShell) — symlinks need Developer Mode, so a plain copy is simpler:
+Windows (PowerShell) — requires Developer Mode enabled, or running as Administrator:
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\starship.toml" -Target "$env:USERPROFILE\dotfiles\starship\starship.toml"
+```
+
+If symlinks aren't an option, copy the file instead — just remember to re-copy after future `git pull`s:
 
 ```powershell
 Copy-Item ~\dotfiles\starship\starship.toml "$env:USERPROFILE\.config\starship.toml"

@@ -26,7 +26,13 @@ ln -s ~/dotfiles/wezterm/wezterm.lua ~/.wezterm.lua
 
 ### Windows
 
-Install via `winget install wez.wezterm`, then copy (symlinks need Developer Mode enabled on Windows, so a plain copy is simpler):
+Install via `winget install wez.wezterm`, then symlink (requires Developer Mode enabled, or PowerShell running as Administrator):
+
+```powershell
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.wezterm.lua" -Target "$env:USERPROFILE\dotfiles\wezterm\wezterm.lua"
+```
+
+If symlinks aren't an option, copy the file instead — just remember to re-copy after future `git pull`s:
 
 ```powershell
 Copy-Item ~\dotfiles\wezterm\wezterm.lua ~\.wezterm.lua
