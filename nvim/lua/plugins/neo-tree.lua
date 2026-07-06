@@ -18,6 +18,18 @@ return {
     git_status = {
       bind_to_cwd = true,
     },
+    -- AstroNvim disables <space> globally (window.mappings["<space>"] = false), so it's
+    -- unbound by default in every source. Re-enable it just for the Bufs list as a preview
+    -- key: keeps focus in the list so you can arrow through buffers and preview each one,
+    -- while <cr> still does the normal "open and jump into it" behavior.
+    buffers = {
+      window = {
+        mappings = {
+          ["<space>"] = "preview",
+          ["<cr>"] = "open",
+        },
+      },
+    },
   },
   config = function(_, opts)
     require("neo-tree").setup(opts)
