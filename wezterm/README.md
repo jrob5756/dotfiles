@@ -32,12 +32,6 @@ Install via `winget install wez.wezterm`, then symlink (requires Developer Mode 
 New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.wezterm.lua" -Target "$env:USERPROFILE\dotfiles\wezterm\wezterm.lua"
 ```
 
-If symlinks aren't an option, copy the file instead — just remember to re-copy after future `git pull`s:
-
-```powershell
-Copy-Item ~\dotfiles\wezterm\wezterm.lua ~\.wezterm.lua
-```
-
 ## Notes
 
 - Requires a [Nerd Font](https://www.nerdfonts.com/) (or a font + fallback, as configured here) for icons to render correctly — matches the same font requirement Neovim's UI already has.

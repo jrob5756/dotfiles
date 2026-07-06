@@ -33,7 +33,7 @@ macOS/Linux:
 ln -s ~/dotfiles/nvim ~/.config/nvim
 ```
 
-Windows (PowerShell) — symlinks need Developer Mode enabled; without it, clone/copy the whole `dotfiles` repo and copy this folder's contents into `%LOCALAPPDATA%\nvim` instead:
+Windows (PowerShell) — requires Developer Mode enabled, or running as Administrator:
 
 ```powershell
 New-Item -ItemType SymbolicLink -Path "$env:LOCALAPPDATA\nvim" -Target "$env:USERPROFILE\dotfiles\nvim"

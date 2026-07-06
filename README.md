@@ -91,22 +91,13 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
 
 3. **Symlink each config into place**
 
-   Creating symlinks on Windows requires Developer Mode enabled (Settings → Privacy & Security → For developers), or running PowerShell as Administrator. With that in place, symlinks behave exactly like the macOS/Linux steps — updates from `git pull` apply immediately, no re-copying needed.
+   Creating symlinks on Windows requires Developer Mode enabled (Settings → Privacy & Security → For developers), or running PowerShell as Administrator. Updates from `git pull` apply immediately, no re-copying needed.
 
    ```powershell
    New-Item -ItemType SymbolicLink -Path "$env:LOCALAPPDATA\nvim" -Target "$env:USERPROFILE\dotfiles\nvim"
    New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.wezterm.lua" -Target "$env:USERPROFILE\dotfiles\wezterm\wezterm.lua"
    New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
    New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\starship.toml" -Target "$env:USERPROFILE\dotfiles\starship\starship.toml"
-   ```
-
-   If you can't enable Developer Mode or run as Administrator, copy the files instead as a fallback — the only downside is you'll need to re-copy after `git pull` picks up changes (see [Keeping configs in sync](#keeping-configs-in-sync) below):
-
-   ```powershell
-   Copy-Item -Recurse $env:USERPROFILE\dotfiles\nvim $env:LOCALAPPDATA\nvim
-   Copy-Item $env:USERPROFILE\dotfiles\wezterm\wezterm.lua $env:USERPROFILE\.wezterm.lua
-   New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.config | Out-Null
-   Copy-Item $env:USERPROFILE\dotfiles\starship\starship.toml $env:USERPROFILE\.config\starship.toml
    ```
 
 4. **Wire up starship in your shell**
@@ -151,6 +142,5 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
 ### Keeping configs in sync
 
 - **macOS/Linux/Windows (symlinked)**: a `git pull` inside `dotfiles` is all you need — every tool immediately sees the updated config, since the symlink always points at the live repo content.
-- **Windows (copied, if you used the fallback)**: after `git pull`, re-run the relevant `Copy-Item` command(s) from step 3 above to pick up the changes.
 
 See each subfolder's own README for tool-specific customization details (`nvim/README.md`, `tmux/README.md`, `wezterm/README.md`, `starship/README.md`).

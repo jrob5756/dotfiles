@@ -25,12 +25,6 @@ New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
 New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\starship.toml" -Target "$env:USERPROFILE\dotfiles\starship\starship.toml"
 ```
 
-If symlinks aren't an option, copy the file instead — just remember to re-copy after future `git pull`s:
-
-```powershell
-Copy-Item ~\dotfiles\starship\starship.toml "$env:USERPROFILE\.config\starship.toml"
-```
-
 ### 3. Initialize in your shell
 
 Add to `~/.zshrc` (or the equivalent for your shell):
