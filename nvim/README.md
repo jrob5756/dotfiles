@@ -8,8 +8,9 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6+ configuration, 
 - **`<S-Right>` / `<S-Left>`** — also switches Neo-tree's source tabs (Files/Buffers/Git) when focused in the explorer
 - **Neo-tree git status fix** — the git status view now follows the working directory (`.` or `:cd`) instead of showing stale results from the previous directory
 - **File explorer opens automatically on startup**, every time, not just when launching `nvim` on a directory
+- **Seamless tmux/Neovim pane navigation** — `<C-h/j/k/l>` moves between Neovim splits *and* tmux panes with the same keys, via `vim-tmux-navigator` (pairs with `~/dotfiles/tmux/tmux.conf`)
 
-See `lua/plugins/astrocore.lua` (core options/mappings/autocmds) and `lua/plugins/neo-tree.lua` (explorer overrides) for the details.
+See `lua/plugins/astrocore.lua` (core options/mappings/autocmds), `lua/plugins/neo-tree.lua` (explorer overrides), and `lua/plugins/tmux-navigator.lua` (tmux pane integration) for the details.
 
 ## 🛠️ Installation on a new machine
 
