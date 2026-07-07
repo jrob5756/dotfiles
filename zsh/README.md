@@ -7,10 +7,11 @@ two plugins I rely on. The Starship prompt is initialized from here too (see
 ## Highlights
 
 - **`t`** — alias for `tmux`.
-- **`dev`** — open (or switch to) the `dev` tmux session, which auto-builds the
-  editor + Copilot layout (`nvim` left ~70%, `a` alias right ~30%). It's a
-  function, not a bare alias, so it works from *inside* tmux too — a plain
-  `tmux new -s dev` refuses to nest. See [`tmux/README.md`](../tmux/README.md#dev-layout).
+- **`dev [dir]`** — open (or switch to) a **per-directory** tmux dev session
+  with the editor + Copilot layout (`nvim` left ~70%, `a` alias right ~30%). It
+  reuses the session if one already exists for that path, otherwise creates a
+  new one; sessions are named `dev-<basename>`. Works from inside or outside
+  tmux. See [`tmux/README.md`](../tmux/README.md#dev-layout).
 - **Partial autosuggestion accept** — `Right` accepts the *next word* of a
   zsh-autosuggestion (via a custom `forward-suggestion-word` widget that narrows
   `WORDCHARS` so it stops at each path/URL segment instead of swallowing the

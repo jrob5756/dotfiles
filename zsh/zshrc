@@ -52,16 +52,30 @@ alias a="agency copilot --yolo"
 
 # tmux
 alias t='tmux'
-# `dev` — open (or switch to) the tmux dev-layout session (nvim + copilot).
-# A function, not a bare alias, so it works from *inside* tmux too: a plain
-# `tmux new -s dev` refuses to nest, whereas this creates the session detached
-# (firing the layout hook) and switches to it.
+# `dev [dir]` — open (or switch to) a per-directory tmux dev session.
+# One session per path: reuses the session if one already exists for that
+# directory, otherwise creates it with the dev layout (nvim left ~70% + the
+# `a` copilot alias right ~30%). Works from inside or outside tmux. The session
+# is named `dev-<basename>`, so two different dirs sharing a basename would
+# collide — rare enough to accept for readability in `tmux ls`.
 dev() {
+  local dir="${1:-$PWD}"
+  dir="${dir:A}"                        # absolute path, symlinks resolved
+  local name="dev-${dir:t}"            # dev-<basename>
+  name="${name//[^a-zA-Z0-9_-]/_}"    # sanitize (tmux dislikes . and :)
+
+  if ! tmux has-session -t "=${name}" 2>/dev/null; then
+    tmux new-session -d -s "$name" -c "$dir"
+    tmux split-window -h -l 30% -t "$name" -c "$dir"
+    tmux send-keys -t "$name" a C-m
+    tmux select-pane -t "$name" -L
+    tmux send-keys -t "$name" nvim C-m
+  fi
+
   if [ -n "$TMUX" ]; then
-    tmux has-session -t dev 2>/dev/null || tmux new-session -d -s dev
-    tmux switch-client -t dev
+    tmux switch-client -t "$name"
   else
-    tmux new-session -A -s dev
+    tmux attach-session -t "$name"
   fi
 }
 
