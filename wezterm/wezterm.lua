@@ -21,6 +21,14 @@ config.window_background_opacity = 1.0
 config.enable_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = true
 
+-- RDP sessions into VMs often lack a real GPU (no OpenGL 3.x), which makes
+-- WezTerm's default GPU-accelerated renderer fail to create a window. Fall
+-- back to the software renderer only when running over RDP so hardware
+-- acceleration is still used on machines with a real GPU.
+if os.getenv("SESSIONNAME") and os.getenv("SESSIONNAME"):match("^RDP%-") then
+	config.front_end = "Software"
+end
+
 -- Cursor -----------------------------------------------------------------
 
 config.default_cursor_style = "BlinkingBar"

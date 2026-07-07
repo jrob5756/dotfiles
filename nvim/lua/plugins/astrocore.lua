@@ -3,6 +3,31 @@
 -- NOTE: We highly recommend setting up the Lua Language Server (`:LspInstall lua_ls`)
 --       as this provides autocomplete and documentation while editing
 
+-- On Windows, Neovim's default shell is `cmd.exe`. We switch it to PowerShell 7 (falling back
+-- to Windows PowerShell) for UTF-8 output and consistency with the interactive shell.
+--
+-- CRITICAL: `-NoProfile` is mandatory here. `vim.o.shell` is used for every string-based
+-- `vim.fn.system("...")` / `:!` call (e.g. Neo-tree cancels search jobs via
+-- `system("taskkill ...")`). Without `-NoProfile`, each of those spawns a pwsh that loads the
+-- full user profile (oh-my-posh, module imports, starship) and, run non-interactively/
+-- redirected, effectively hangs for 60s+ — freezing the whole editor on routine actions like
+-- filtering Neo-tree. With `-NoProfile` the same call is ~0.6s. Interactive terminals that
+-- WANT the profile are launched explicitly (see lua/plugins/toggleterm.lua `<Leader>t5/t7/tc`).
+-- No-op on macOS/Linux, since this config is shared across all three platforms.
+local windows_shell_opts = {}
+if vim.fn.has "win32" == 1 then
+  local shell = vim.fn.executable "pwsh" == 1 and "pwsh" or "powershell"
+  windows_shell_opts = {
+    shell = shell,
+    shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command [Console]::InputEncoding="
+      .. "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;",
+    shellredir = "-RedirectStandardOutput %s -NoNewWindow -Wait",
+    shellpipe = "2>&1 | Out-File -Encoding UTF8 %s; exit $LastExitCode",
+    shellquote = "",
+    shellxquote = "",
+  }
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrocore",
@@ -37,13 +62,13 @@ return {
     },
     -- vim options can be configured here
     options = {
-      opt = { -- vim.opt.<key>
+      opt = vim.tbl_extend("force", {
         relativenumber = true, -- sets vim.opt.relativenumber
         number = true, -- sets vim.opt.number
         spell = false, -- sets vim.opt.spell
         signcolumn = "yes", -- sets vim.opt.signcolumn to yes
         wrap = false, -- sets vim.opt.wrap
-      },
+      }, windows_shell_opts),
       g = { -- vim.g.<key>
         -- configure global vim variables (vim.g)
         -- NOTE: `mapleader` and `maplocalleader` must be set in the AstroNvim opts or before `lazy.setup`
