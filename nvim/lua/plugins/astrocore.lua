@@ -68,6 +68,9 @@ return {
         spell = false, -- sets vim.opt.spell
         signcolumn = "yes", -- sets vim.opt.signcolumn to yes
         wrap = false, -- sets vim.opt.wrap
+        -- route all yanks/deletes/changes through the system clipboard (`+` register).
+        -- NOTE: this means `d`/`c`/`x` also overwrite the OS clipboard, not just `y`.
+        clipboard = "unnamedplus", -- sets vim.opt.clipboard
       }, windows_shell_opts),
       g = { -- vim.g.<key>
         -- configure global vim variables (vim.g)
@@ -87,6 +90,10 @@ return {
         ["[b"] = { function() require("astrocore.buffer").nav(-vim.v.count1) end, desc = "Previous buffer" },
         ["<S-Right>"] = { function() require("astrocore.buffer").nav(vim.v.count1) end, desc = "Next buffer" },
         ["<S-Left>"] = { function() require("astrocore.buffer").nav(-vim.v.count1) end, desc = "Previous buffer" },
+
+        -- yank the whole buffer to the system clipboard. Capital `A` avoids shadowing the
+        -- `ya` "around" text objects (`yaw`, `yap`, `ya(`, ...) and does not move the cursor.
+        ["yA"] = { "<Cmd>%y+<CR>", desc = "Yank whole file to system clipboard" },
 
         -- mappings seen under group name "Buffer"
         ["<Leader>bd"] = {
