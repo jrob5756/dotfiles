@@ -9,6 +9,7 @@ Personal configuration files, tracked here so I can set up a new machine (macOS,
 | [`nvim/`](./nvim) | [Neovim](https://neovim.io/) ([AstroNvim](https://github.com/AstroNvim/AstroNvim) v6+) | See `nvim/README.md` for customizations and setup |
 | [`tmux/`](./tmux) | [tmux](https://github.com/tmux/tmux) | Terminal multiplexer, prefix remapped to `Ctrl-a`, seamless pane navigation with Neovim via `vim-tmux-navigator` |
 | [`zsh/`](./zsh) | [zsh](https://www.zsh.org/) | Interactive shell — history, completion, key bindings, aliases, plugins; also initializes the Starship prompt (macOS/Linux, or WSL on Windows) |
+| [`bash/`](./bash) | [bash](https://www.gnu.org/software/bash/) | Interactive shell (WSL) — Debian default `.bashrc` plus aliases and the Starship prompt init |
 | [`wezterm/`](./wezterm) | [WezTerm](https://wezterm.org/) | Cross-platform terminal (macOS/Linux/Windows) — the one terminal config meant to work identically everywhere, including Windows |
 | [`starship/`](./starship) | [Starship](https://starship.rs/) | Cross-platform shell prompt — minimal, left-bordered, with git branch/status |
 
@@ -45,6 +46,7 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
    ln -s ~/dotfiles/nvim ~/.config/nvim
    ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
    ln -s ~/dotfiles/zsh/zshrc ~/.zshrc
+   ln -s ~/dotfiles/bash/bashrc ~/.bashrc   # WSL only
    ln -s ~/dotfiles/wezterm/wezterm.lua ~/.wezterm.lua
    mkdir -p ~/.config
    ln -s ~/dotfiles/starship/starship.toml ~/.config/starship.toml
