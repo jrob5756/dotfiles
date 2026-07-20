@@ -1,0 +1,7 @@
+# Force LF line endings for shell/readline configs regardless of platform.
+# CRLF silently breaks readline's parsing of key-sequence bindings in
+# inputrc (see bash/README.md), so don't let git or an editor reintroduce it.
+bash/inputrc text eol=lf
+bash/bashrc text eol=lf
+zsh/zshrc text eol=lf
+tmux/tmux.conf text eol=lf

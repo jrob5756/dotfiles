@@ -15,15 +15,21 @@ plugin updater, and the Starship prompt init.
 - **Starship** — prompt is initialized from here (`eval "$(starship init
   bash)"`), same as the zsh config.
 
+- **`inputrc`** — readline config shared by bash (and anything else using
+  readline). Currently just makes `Up`/`Down` search history from what's
+  already typed, matching the zsh arrow-key behavior.
+
 ## Setup
 
-### Symlink the config
+### Symlink the configs
 
 ```shell
 ln -s ~/dotfiles/bash/bashrc ~/.bashrc
+ln -s ~/dotfiles/bash/inputrc ~/.inputrc
 ```
 
-Then start a new shell (or `source ~/.bashrc`).
+Then start a new shell (or `source ~/.bashrc`; `.inputrc` is picked up by
+readline automatically in new shells).
 
 ## Notes
 
@@ -32,3 +38,7 @@ Then start a new shell (or `source ~/.bashrc`).
 - **Tool-managed blocks.** Agency maintains its own `# BEGIN … MANAGED BLOCK …
   END` section in this file and will keep editing it in place through the
   symlink, same as noted in `zsh/README.md`.
+- **Line endings matter.** `inputrc` must use Unix (LF) line endings — CRLF
+  breaks readline's parsing of key-sequence bindings like `\e[A`/`\e[B`
+  silently (no error, the binding just never takes effect). If you edit it on
+  Windows, make sure your editor/git config doesn't reintroduce CRLF.

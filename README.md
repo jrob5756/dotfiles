@@ -47,6 +47,7 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
    ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
    ln -s ~/dotfiles/zsh/zshrc ~/.zshrc
    ln -s ~/dotfiles/bash/bashrc ~/.bashrc   # WSL only
+   ln -s ~/dotfiles/bash/inputrc ~/.inputrc  # WSL only
    ln -s ~/dotfiles/wezterm/wezterm.lua ~/.wezterm.lua
    mkdir -p ~/.config
    ln -s ~/dotfiles/starship/starship.toml ~/.config/starship.toml
