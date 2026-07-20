@@ -152,3 +152,8 @@ if [[ ":${PATH}:" != *":/home/jason/.config/agency/CurrentVersion:"* ]]; then
     export PATH="/home/jason/.config/agency/CurrentVersion:${PATH}"
 fi
 # END Agency MANAGED BLOCK
+
+# Ensure ~/.local/bin is on PATH for interactive non-login shells (e.g. rg installed there)
+if [[ -d "$HOME/.local/bin" && ":${PATH}:" != *":$HOME/.local/bin:"* ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
