@@ -46,9 +46,13 @@ alias gl='git log --oneline --graph --decorate -20'
 alias gp='git push'
 alias gc='git commit'
 alias ga='git add'
-alias c="copilot --yolo"
-alias p="copilot -sp"
-alias a="agency copilot --yolo"
+# `-u TMUX` strips the TMUX env var only for this process (a no-op outside
+# tmux). Copilot CLI checks $TMUX directly and disables its accent theme/
+# highlight as a tmux-compatibility fallback, regardless of actual terminal
+# capabilities (TERM/TERM_PROGRAM/COLORTERM don't matter) — this restores it.
+alias c="env -u TMUX copilot --yolo"
+alias p="env -u TMUX copilot -sp"
+alias a="env -u TMUX agency copilot --yolo"
 
 # tmux
 alias t='tmux'

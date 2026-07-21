@@ -123,7 +123,11 @@ alias kgp="k get pods"
 alias kga="k get all" 
 alias mk=minikube 
 alias wkgp="watch kubectl get pods" 
-alias a="agency copilot --yolo" 
+# `-u TMUX` strips the TMUX env var only for this process (a no-op outside
+# tmux). Copilot CLI checks $TMUX directly and disables its accent theme/
+# highlight as a tmux-compatibility fallback, regardless of actual terminal
+# capabilities (TERM/TERM_PROGRAM/COLORTERM don't matter) — this restores it.
+alias a="env -u TMUX agency copilot --yolo" 
 
 # cup: update all @jason-tools copilot plugins (parallels PowerShell alias)
 cup() {
@@ -157,3 +161,7 @@ fi
 if [[ -d "$HOME/.local/bin" && ":${PATH}:" != *":$HOME/.local/bin:"* ]]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
