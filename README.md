@@ -35,7 +35,9 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
    brew install --cask wezterm
 
    # Linux — use your distro's package manager, e.g.:
-   sudo apt install neovim tmux          # starship and wezterm aren't in most default repos;
+   sudo apt install neovim tmux xclip    # xclip backs Neovim's system clipboard (unnamedplus)
+                                          # on X11/WSLg; on a Wayland desktop use wl-clipboard.
+                                          # starship and wezterm aren't in most default repos;
                                           # see https://starship.rs/guide/#-installation and
                                           # https://wezterm.org/installation.html
    ```
@@ -126,7 +128,7 @@ Every tool's config lives in its own subfolder here and gets linked (or copied, 
    Then, inside the WSL shell:
 
    ```shell
-   sudo apt update && sudo apt install tmux
+   sudo apt update && sudo apt install tmux xclip   # xclip = Neovim's clipboard provider under WSLg (unnamedplus)
    git clone https://github.com/jrob5756/dotfiles ~/dotfiles   # a separate clone, inside WSL's own filesystem
    ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
