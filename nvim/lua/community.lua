@@ -8,5 +8,6 @@ return {
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.completion.blink-copilot" },
   { import = "astrocommunity.editing-support.auto-save-nvim" },
+  { import = "astrocommunity.search.grug-far-nvim" },
   -- import/override with your plugins folder
 }
