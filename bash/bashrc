@@ -165,3 +165,16 @@ fi
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# .NET runtime for code-indexer's Astred parser (pythonnet/clr_loader).
+# Version 9.0.0 matches MODULE.bazel's dotnet_runtime_linux pin.
+if [[ -d "$HOME/.dotnet" ]]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+    [[ ":$PATH:" != *":$HOME/.dotnet:"* ]] && export PATH="$HOME/.dotnet:$PATH"
+fi
+
+# Bazel: .bazelrc.ci (tracked, try-imported by .bazelrc) carries a value-less
+# `--repo_env=NETRC`. With NETRC unset, Bazel 9 aborts before running any
+# command: "NullPointerException: null value in entry: NETRC=null".
+# See ~/src/work/prism/UPSTREAM-ISSUES.md
+export NETRC="$HOME/.netrc"
