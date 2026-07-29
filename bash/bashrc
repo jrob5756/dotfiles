@@ -129,11 +129,29 @@ alias wkgp="watch kubectl get pods"
 # capabilities (TERM/TERM_PROGRAM/COLORTERM don't matter) — this restores it.
 alias a="env -u TMUX agency copilot --yolo" 
 
+# Agency installs the Copilot CLI as ~/.copilot-cli/<version>/copilot and puts
+# no shim on PATH, so resolve the highest installed version at call time.
+_copilot_bin() {
+    if command -v copilot >/dev/null 2>&1; then
+        command -v copilot
+        return 0
+    fi
+    local latest
+    latest=$(ls -1 "$HOME/.copilot-cli" 2>/dev/null | sort -V | tail -n 1)
+    [[ -n $latest && -x "$HOME/.copilot-cli/$latest/copilot" ]] || return 1
+    printf '%s\n' "$HOME/.copilot-cli/$latest/copilot"
+}
+
 # cup: update all @jason-tools copilot plugins (parallels PowerShell alias)
 cup() {
-    copilot plugin list | while read -r line; do
+    local copilot_bin
+    if ! copilot_bin=$(_copilot_bin); then
+        echo "cup: copilot CLI not found on PATH or in ~/.copilot-cli" >&2
+        return 1
+    fi
+    "$copilot_bin" plugin list | while read -r line; do
         if [[ $line =~ ([[:alnum:]_-]+)@jason-tools ]]; then
-            copilot plugin update "${BASH_REMATCH[1]}"
+            "$copilot_bin" plugin update "${BASH_REMATCH[1]}"
         fi
     done
 }
