@@ -142,18 +142,69 @@ _copilot_bin() {
     printf '%s\n' "$HOME/.copilot-cli/$latest/copilot"
 }
 
-# cup: update all @jason-tools copilot plugins (parallels PowerShell alias)
+# Emit "<name>\t<path>" for every directory-sourced marketplace in settings.json.
+_copilot_local_marketplaces() {
+    python3 - "$1" <<'PY'
+import json, re, sys
+
+try:
+    text = open(sys.argv[1], encoding="utf-8").read()
+except OSError:
+    sys.exit(0)
+# settings.json is sometimes written with // line comments.
+text = re.sub(r'^\s*//.*$', '', text, flags=re.MULTILINE)
+try:
+    data = json.loads(text)
+except ValueError as exc:
+    print(f"cup: cannot parse {sys.argv[1]}: {exc}", file=sys.stderr)
+    sys.exit(1)
+for name, entry in (data.get("extraKnownMarketplaces") or {}).items():
+    source = (entry or {}).get("source") or {}
+    if source.get("source") == "directory" and source.get("path"):
+        print(f"{name}\t{source['path']}")
+PY
+}
+
+# cup: refresh every locally-sourced copilot plugin marketplace.
+#
+# The @jason-tools / @conductor / @conductor-workflows plugins come from
+# "directory" marketplaces, so the CLI loads them straight off disk and never
+# records them under `copilot plugin list` / ~/.copilot/installed-plugins.
+# Updating them therefore means pulling the backing git repo, then asking the
+# CLI to re-read each marketplace catalog.
 cup() {
     local copilot_bin
     if ! copilot_bin=$(_copilot_bin); then
         echo "cup: copilot CLI not found on PATH or in ~/.copilot-cli" >&2
         return 1
     fi
-    "$copilot_bin" plugin list | while read -r line; do
-        if [[ $line =~ ([[:alnum:]_-]+)@jason-tools ]]; then
-            "$copilot_bin" plugin update "${BASH_REMATCH[1]}"
+
+    local settings="${COPILOT_CONFIG_DIR:-$HOME/.copilot}/settings.json"
+    local name path found=0
+    while IFS=$'\t' read -r name path; do
+        [[ -n $name && -n $path ]] || continue
+        found=1
+        path="${path/#\~/$HOME}"
+        if [[ ! -d $path ]]; then
+            echo "cup: $name -> $path does not exist, skipping" >&2
+        elif [[ ! -d $path/.git ]]; then
+            echo "cup: $name -> $path is not a git repo, nothing to pull"
+        elif [[ -n $(git -C "$path" status --porcelain) ]]; then
+            echo "cup: $name -> $path has uncommitted changes, skipping pull" >&2
+        else
+            echo "cup: pulling $name ($path)"
+            git -C "$path" pull --ff-only || echo "cup: pull failed for $name" >&2
         fi
-    done
+    done < <(_copilot_local_marketplaces "$settings")
+
+    (( found )) || echo "cup: no directory marketplaces found in $settings" >&2
+
+    "$copilot_bin" plugin marketplace update
+    # Covers any genuinely installed (non-directory) plugins. With only
+    # directory marketplaces this is a no-op, so don't print its noise.
+    local update_out
+    update_out=$("$copilot_bin" plugin update --all 2>&1)
+    [[ $update_out == "No plugins installed."* ]] || printf '%s\n' "$update_out"
 }
 
 # Duplicate Tab/Pane maintains working directory 

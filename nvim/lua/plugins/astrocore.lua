@@ -95,6 +95,13 @@ return {
         -- `ya` "around" text objects (`yaw`, `yap`, `ya(`, ...) and does not move the cursor.
         ["yA"] = { "<Cmd>%y+<CR>", desc = "Yank whole file to system clipboard" },
 
+        -- centre the view on each search result instead of leaving it wherever it lands.
+        -- `zz` recentres; `zv` reopens a fold the match fell inside, which `zz` alone would
+        -- leave closed and hide the match. Normal mode only — mapping these in operator-pending
+        -- mode would break `dn`/`cn` by feeding the `zz` to the operator.
+        ["n"] = { "nzzzv", desc = "Next search result (centred)" },
+        ["N"] = { "Nzzzv", desc = "Previous search result (centred)" },
+
         -- mappings seen under group name "Buffer"
         ["<Leader>bd"] = {
           function()
