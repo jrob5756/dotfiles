@@ -1,0 +1,33 @@
+# GENERATED FILE — DO NOT EDIT.
+#
+# Rendered from modules/starship-settings.nix by `nix run .#render`.
+# Committed because Windows consumes it directly: starship runs under
+# PowerShell there and Nix has no native Windows support, so the Windows
+# clone symlinks this file to ~/.config/starship.toml.
+#
+# `nix flake check` fails if this has drifted from the Nix source.
+add_newline = true
+command_timeout = 1000
+format = """
+[┌──](#6C7A96) $directory$git_branch$git_status
+[│](#6C7A96)
+[└─](#6C7A96) $character"""
+
+[character]
+error_symbol = "[❯](bold #EC6A77)"
+success_symbol = "[❯](bold #B5D99C)"
+
+[directory]
+format = "[$path ]($style)"
+style = "bold #A3C4E0"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+format = "[$symbol $branch ]($style)"
+style = "bold #5EC4FF"
+symbol = ""
+
+[git_status]
+format = "[$all_status$ahead_behind]($style)"
+style = "bold #EC6A77"

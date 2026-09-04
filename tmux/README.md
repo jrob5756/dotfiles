@@ -49,27 +49,29 @@ different split ratio (all in `tmux.conf`).
 
 ## Setup
 
-### 1. Install tmux
+Home Manager handles all of this — `home-manager switch --flake .#<host>`
+installs tmux, pins the plugins, and writes `~/.config/tmux/tmux.conf`. There is
+no TPM install and no `prefix + I` step; plugins are present on first launch.
 
-macOS: `brew install tmux`
-Linux: use your package manager (`apt install tmux`, `pacman -S tmux`, etc.)
-Windows: tmux doesn't run natively — use it inside WSL.
+See the root [`README.md`](../README.md) for the full bootstrap.
 
-### 2. Symlink the config
+### What lives where
 
-```shell
-ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
-```
+`modules/tmux.nix` owns the package, the plugins, and the settings the Home
+Manager module models directly — prefix, mouse, base index, key mode, escape
+time, history limit, and terminal type. Everything else — the bindings, the
+`dev` layout hook, pane navigation, and copy-mode setup — stays in `tmux.conf`
+in tmux's own syntax and is read in as `extraConfig`.
 
-### 3. Install TPM (Tmux Plugin Manager)
+Don't set any of the Nix-owned values in `tmux.conf`: they would be applied
+twice and the two copies would drift.
 
-```shell
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-```
+### Reloading
 
-### 4. Install plugins
-
-Launch tmux, then press `prefix` + `I` (capital i) to fetch and install the plugins listed in `tmux.conf` (`vim-tmux-navigator`, `tmux-resurrect`, `tmux-continuum`).
+`prefix + r` re-sources `~/.config/tmux/tmux.conf`. That picks up edits to
+`tmux.conf` only after a `home-manager switch`, since the installed file is a
+copy in the Nix store. Changes to plugins or the Nix-owned settings always need
+a switch.
 
 ## Session persistence
 

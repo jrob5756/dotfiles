@@ -1,0 +1,6 @@
+# Nix build outputs
+result
+result-*
+
+# Local, machine-specific direnv state
+.direnv/

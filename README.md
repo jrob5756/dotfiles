@@ -1,155 +1,149 @@
 # Jason's Dotfiles
 
-Personal configuration files, tracked here so I can set up a new machine (macOS, Linux, or Windows) quickly and consistently.
+Personal configuration files, tracked here so I can set up a new machine (macOS,
+Linux, WSL, or Windows) quickly and consistently.
 
-## Contents
+macOS, Linux and WSL are managed declaratively with [Nix](https://nixos.org/)
+and [Home Manager](https://nix-community.github.io/home-manager/). Windows has
+no native Nix, so it keeps the original clone-and-symlink approach.
 
-| Folder | Tool | Notes |
+## Layout
+
+| Path | What |
+|---|---|
+| [`flake.nix`](./flake.nix) | Inputs, host configurations, the render app, and the drift check |
+| [`modules/`](./modules) | Home Manager modules — one per tool, plus per-platform deltas |
+| [`hosts/`](./hosts) | One file per machine: `wsl`, `linux`, `mac` |
+| [`nvim/`](./nvim) | [Neovim](https://neovim.io/) ([AstroNvim](https://github.com/AstroNvim/AstroNvim) v6+) — plain Lua, shared by every platform |
+| [`tmux/`](./tmux) | tmux bindings and hooks in tmux's own syntax; packages and plugins come from `modules/tmux.nix` |
+| [`shell/`](./shell) | Shell functions shared by bash and zsh |
+| [`starship/`](./starship) | Docs only — the prompt is defined in `modules/starship-settings.nix` |
+| [`generated/`](./generated) | Nix-rendered files that are committed because Windows consumes them |
+| [`windows/`](./windows) | Windows Terminal, PowerShell profile, and the bootstrap script |
+
+## How platform differences are handled
+
+Everything lives on one branch. Windows-vs-Unix is a *permanent* axis of
+variation, and a branch models divergence that is meant to end — you merge it
+and delete it. A "Windows branch" would never be merged, so it would just be a
+directory with the wrong name, and every shared Neovim change would have to be
+cherry-picked across both forever.
+
+Instead, each tool is placed according to what consumes its config:
+
+| Tool | Runs on | Managed as |
 |---|---|---|
-| [`nvim/`](./nvim) | [Neovim](https://neovim.io/) ([AstroNvim](https://github.com/AstroNvim/AstroNvim) v6+) | See `nvim/README.md` for customizations and setup |
-| [`tmux/`](./tmux) | [tmux](https://github.com/tmux/tmux) | Terminal multiplexer, prefix remapped to `Ctrl-a`, seamless pane navigation with Neovim via `vim-tmux-navigator` |
-| [`zsh/`](./zsh) | [zsh](https://www.zsh.org/) | Interactive shell — history, completion, key bindings, aliases, plugins; also initializes the Starship prompt (macOS/Linux, or WSL on Windows) |
-| [`bash/`](./bash) | [bash](https://www.gnu.org/software/bash/) | Interactive shell (WSL) — Debian default `.bashrc` plus aliases and the Starship prompt init |
-| [`wezterm/`](./wezterm) | [WezTerm](https://wezterm.org/) | Cross-platform terminal (macOS/Linux/Windows) — the one terminal config meant to work identically everywhere, including Windows |
-| [`starship/`](./starship) | [Starship](https://starship.rs/) | Cross-platform shell prompt — minimal, left-bordered, with git branch/status |
+| tmux, bash, zsh | Unix only | **Full Nix** — no Windows counterpart to keep in sync |
+| Ghostty | macOS, Linux | **Full Nix** — no Windows build exists |
+| Neovim | everywhere | **Plain Lua** — see below |
+| Starship | everywhere | **Nix source, rendered + committed** |
+| Windows Terminal, PowerShell | Windows only | **Plain files** — Nix can never reach them |
 
-More folders (ghostty, git, etc.) will be added here as I configure them.
+Two rules fall out of that:
 
-## Setup
+**Neovim stays plain Lua.** Generating it from Nix would mean writing Lua inside
+Nix strings — no type checking, no LSP, and no upstream snippet would apply.
+More concretely, lazy.nvim writes `lazy-lock.json` back into its config
+directory, which a read-only Nix store path makes impossible. Home Manager
+therefore points at the live checkout with `mkOutOfStoreSymlink`, so edits take
+effect with no rebuild, and Windows symlinks the same folder.
 
-Every tool's config lives in its own subfolder here and gets linked (or copied, on Windows) into the location that tool expects. Assumes you already have `git` and a package manager (Homebrew on macOS/Linux, `winget` on Windows) installed.
+**Starship is generated and committed.** It is the only tool that both runs
+natively on Windows and benefits from Nix-managed settings, so Nix is the source
+of truth and `generated/starship.toml` is the build output. `nix flake check`
+fails if that file goes stale. Any future tool in the same position follows the
+same pattern — treat Nix as a build system whose outputs are committed, not just
+an installer.
 
-### macOS / Linux
+## Setup — macOS / Linux / WSL
 
-1. **Clone this repo**
+### 1. Install Nix
 
-   ```shell
-   git clone https://github.com/jrob5756/dotfiles ~/dotfiles
-   ```
+The [Determinate Systems installer](https://github.com/DeterminateSystems/nix-installer)
+handles WSL and systemd cleanly and ships a real uninstaller:
 
-2. **Install the tools**
+```shell
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
 
-   ```shell
-   # macOS (Homebrew)
-   brew install neovim tmux starship
-   brew install --cask wezterm
+Open a new shell afterwards so the daemon and profile are picked up.
 
-   # Linux — use your distro's package manager, e.g.:
-   sudo apt install neovim tmux xclip    # xclip backs Neovim's system clipboard (unnamedplus)
-                                          # on X11/WSLg; on a Wayland desktop use wl-clipboard.
-                                          # starship and wezterm aren't in most default repos;
-                                          # see https://starship.rs/guide/#-installation and
-                                          # https://wezterm.org/installation.html
-   ```
+### 2. Clone this repo
 
-3. **Symlink each config into place**
+```shell
+git clone https://github.com/jrob5756/dotfiles ~/src/dotfiles
+cd ~/src/dotfiles
+```
 
-   ```shell
-   ln -s ~/dotfiles/nvim ~/.config/nvim
-   ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
-   ln -s ~/dotfiles/zsh/zshrc ~/.zshrc
-   ln -s ~/dotfiles/bash/bashrc ~/.bashrc   # WSL only
-   ln -s ~/dotfiles/bash/inputrc ~/.inputrc  # WSL only
-   ln -s ~/dotfiles/wezterm/wezterm.lua ~/.wezterm.lua
-   mkdir -p ~/.config
-   ln -s ~/dotfiles/starship/starship.toml ~/.config/starship.toml
-   ```
+The path matters: `dotfiles.path` in `hosts/*.nix` points at the live checkout
+for out-of-store symlinks. Override it there if you clone somewhere else.
 
-4. **Install tmux's plugin manager (TPM) and its plugins**
+### 3. Activate
 
-   ```shell
-   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-   ```
+```shell
+nix run home-manager/master -- switch --flake .#wsl    # or .#linux / .#mac
+```
 
-   Launch tmux, then press `prefix` (`Ctrl-a`) + `I` (capital i) to fetch and install the plugins declared in `tmux.conf`.
+After the first activation, `home-manager` is on PATH, so later runs are just:
 
-5. **Wire up starship in your shell**
+```shell
+home-manager switch --flake .#wsl
+```
 
-   If you symlinked the zsh config above, this is already done — `zsh/zshrc`
-   ends with `eval "$(starship init zsh)"`. For any other shell, add the
-   equivalent init line yourself, e.g.:
+### 4. Verify
 
-   ```shell
-   eval "$(starship init zsh)"
-   ```
+- `tmux` starts with the `Ctrl-a` prefix, and `prefix + I` is **not** needed —
+  plugins are pinned by the flake
+- `nvim` opens with the explorer showing and finishes installing plugins
+- The prompt shows the left-bordered starship style
+- `Ctrl-h/j/k/l` moves between tmux panes *and* Neovim splits
 
-6. **Verify it worked**
+## Setup — Windows
 
-   - `nvim` opens with the file explorer already showing, and plugins finish installing automatically on first launch (via lazy.nvim)
-   - Launch WezTerm — Catppuccin Mocha theme and JetBrains Mono font should be visible
-   - Open a new terminal (or `tmux new`) and confirm the prompt shows the left-bordered starship style with git branch/status
-   - Inside tmux, `Ctrl-a |` splits a pane, and `Ctrl-h/j/k/l` moves between tmux panes *and* Neovim splits seamlessly (once inside `nvim`)
+See [`windows/README.md`](./windows/README.md). In short:
 
-### Windows
+```powershell
+git clone https://github.com/jrob5756/dotfiles C:\src\dotfiles
+pwsh -File C:\src\dotfiles\windows\bootstrap.ps1
+```
 
-`tmux` has **no native Windows build at all** — it depends on Unix domain sockets and pty handling that only exist on Unix-like systems. There's no way around this outside of WSL (see the WSL section below). Neovim, WezTerm, and Starship, on the other hand, all run natively on Windows with no such caveat.
+That symlinks Neovim, starship, and the PowerShell profile. Windows Terminal's
+`settings.json` is copied rather than linked, because it rewrites the file in
+place whenever you change something in its UI.
 
-1. **Clone this repo**
+tmux has no native Windows build — it depends on Unix domain sockets and pty
+handling. Use it inside WSL, or use Windows Terminal's own panes.
 
-   ```powershell
-   git clone https://github.com/jrob5756/dotfiles $env:USERPROFILE\dotfiles
-   ```
+## Day-to-day
 
-2. **Install the natively-Windows tools via winget**
+| Task | Command |
+|---|---|
+| Apply config changes | `home-manager switch --flake .#<host>` |
+| Update pinned inputs | `nix flake update` then switch |
+| Re-render generated files | `nix run .#render` |
+| Validate before committing | `nix flake check` |
+| Format Nix files | `nix fmt` |
+| Roll back | `home-manager generations` then run the listed activation |
 
-   ```powershell
-   winget install Neovim.Neovim
-   winget install wez.wezterm
-   winget install Starship.Starship
-   ```
+Editing `nvim/` needs no rebuild — it is an out-of-store symlink to this
+checkout.
 
-3. **Symlink each config into place**
+## Escape hatches
 
-   Creating symlinks on Windows requires Developer Mode enabled (Settings → Privacy & Security → For developers), or running PowerShell as Administrator. Updates from `git pull` apply immediately, no re-copying needed.
+Home Manager installs `~/.bashrc` and `~/.zshrc` as read-only symlinks into the
+Nix store, so anything that rewrites them in place — Agency and claude-cli both
+append a `MANAGED BLOCK` — will fail. Both rc files source a writable sibling at
+the end:
 
-   ```powershell
-   New-Item -ItemType SymbolicLink -Path "$env:LOCALAPPDATA\nvim" -Target "$env:USERPROFILE\dotfiles\nvim"
-   New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.wezterm.lua" -Target "$env:USERPROFILE\dotfiles\wezterm\wezterm.lua"
-   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
-   New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\starship.toml" -Target "$env:USERPROFILE\dotfiles\starship\starship.toml"
-   ```
+- `~/.bashrc.local`
+- `~/.zshrc.local`
 
-4. **Wire up starship in your shell**
+Point those tools there, and put machine-specific `PATH` entries and secrets in
+the same place. They are outside the repo and never committed. On Windows the
+equivalent is `profile.local.ps1` next to `$PROFILE`.
 
-   Add to your PowerShell `$PROFILE`:
+## Note on this being a public repo
 
-   ```powershell
-   Invoke-Expression (&starship init powershell)
-   ```
-
-5. **tmux, via WSL**
-
-   Since tmux can't run outside WSL on Windows, install and configure it inside a WSL distro — at that point it's just Linux, so follow the **macOS/Linux steps above (2-4)** for tmux specifically, from within the WSL shell:
-
-   ```powershell
-   wsl --install                         # if WSL isn't already set up
-   ```
-
-   Then, inside the WSL shell:
-
-   ```shell
-   sudo apt update && sudo apt install tmux xclip   # xclip = Neovim's clipboard provider under WSLg (unnamedplus)
-   git clone https://github.com/jrob5756/dotfiles ~/dotfiles   # a separate clone, inside WSL's own filesystem
-   ln -s ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
-   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-   ```
-
-   Then launch `tmux` from inside WSL and press `prefix` (`Ctrl-a`) + `I` to install plugins, same as macOS/Linux.
-
-6. **Native Windows fallback for multiplexing (no WSL)**
-
-   If you're working in a native Windows terminal session (PowerShell/cmd running directly, not inside a WSL shell), tmux isn't reachable there at all — not even a limited version. For that context, use **WezTerm's own built-in pane and tab multiplexing** instead (its native split-pane and tab keybindings, no config changes needed here). It's a different key scheme than tmux's `Ctrl-a`-prefixed commands, but serves the same practical purpose: multiple panes/sessions in one window.
-
-7. **Verify it worked**
-
-   - `nvim` opens correctly from `%LOCALAPPDATA%\nvim`, explorer auto-opens, plugins install on first launch
-   - WezTerm launches with the Catppuccin Mocha theme and correct font
-   - PowerShell prompt shows the starship style
-   - Inside a WSL shell, `tmux` starts and `Ctrl-a |` splits a pane as expected
-   - Outside WSL, WezTerm's native pane splitting works as the tmux substitute
-
-### Keeping configs in sync
-
-- **macOS/Linux/Windows (symlinked)**: a `git pull` inside `dotfiles` is all you need — every tool immediately sees the updated config, since the symlink always points at the live repo content.
-
-See each subfolder's own README for tool-specific customization details (`nvim/README.md`, `tmux/README.md`, `wezterm/README.md`, `starship/README.md`).
+This repository is public. Keep work-specific paths, internal repo and service
+names, machine names, and credentials out of it — use the escape-hatch files
+above.

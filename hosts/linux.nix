@@ -1,0 +1,9 @@
+{ ... }:
+{
+  imports = [
+    ../modules/base.nix
+    ../modules/linux.nix
+  ];
+
+  dotfiles.path = "/home/jason/src/dotfiles";
+}
