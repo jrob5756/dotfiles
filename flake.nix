@@ -89,11 +89,27 @@
         let
           render = pkgs.writeShellApplication {
             name = "render";
-            runtimeInputs = [ pkgs.git ];
+            runtimeInputs = [
+              pkgs.git
+              pkgs.coreutils
+            ];
             text = ''
               root=$(git rev-parse --show-toplevel)
               install -Dm644 ${starshipToml pkgs} "$root/generated/starship.toml"
-              echo "rendered generated/starship.toml"
+              install -Dm644 ${starshipToml pkgs} "$root/starship/starship.toml"
+              echo "rendered generated/starship.toml and starship/starship.toml"
+            '';
+          };
+          migrate = pkgs.writeShellApplication {
+            name = "dotfiles-migrate";
+            runtimeInputs = [
+              pkgs.python3
+              pkgs.git
+              pkgs.bash
+              pkgs.zsh
+            ];
+            text = ''
+              exec python3 ${./scripts/migrate.py} "$@"
             '';
           };
         in
@@ -102,19 +118,142 @@
             type = "app";
             program = "${render}/bin/render";
           };
+          migrate = {
+            type = "app";
+            program = "${migrate}/bin/dotfiles-migrate";
+          };
         }
       );
 
-      # Guards the one hand-committed artifact against silently going stale.
-      checks = forAllSystems (pkgs: {
-        starship-drift = pkgs.runCommand "starship-drift" { } ''
-          if ! diff -u ${./generated/starship.toml} ${starshipToml pkgs}; then
-            echo "generated/starship.toml is stale — run: nix run .#render" >&2
-            exit 1
-          fi
-          touch "$out"
-        '';
-      });
+      # Keep both new and pre-migration config links on the same generated prompt.
+      checks = forAllSystems (
+        pkgs:
+        {
+          editor-tools =
+            pkgs.runCommand "editor-tools" { nativeBuildInputs = import ./modules/editor-tools.nix pkgs; }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                export DOTNET_CLI_TELEMETRY_OPTOUT=1
+                export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+                for tool in git rg fd lazygit curl tar node python3 debugpy-adapter \
+                  basedpyright-langserver ruff lua-language-server stylua selene \
+                  tree-sitter cc make dotnet csharp-ls csharpier; do
+                  command -v "$tool" >/dev/null
+                done
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "command -v netcoredbg >/dev/null"}
+                python3 -c 'import debugpy'
+                test -n "$(dotnet --list-sdks)"
+                touch "$out"
+              '';
+          windows-syntax =
+            pkgs.runCommand "windows-syntax"
+              {
+                nativeBuildInputs = [
+                  pkgs.python3
+                  pkgs.powershell
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                export DOTFILES_WINDOWS_ROOT=${./windows}
+                export REQUIRE_PWSH=1
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_windows*.py'
+                touch "$out"
+              '';
+          tmux-config =
+            pkgs.runCommand "tmux-config"
+              {
+                nativeBuildInputs = [
+                  pkgs.python3
+                  pkgs.tmux
+                ];
+              }
+              ''
+                export DOTFILES_LEGACY_TMUX_CONFIG=${./tmux/tmux.conf}
+                export DOTFILES_TMUX_CONFIG=${
+                  pkgs.writeText "tmux-managed.conf"
+                    self.homeConfigurations.${
+                      if pkgs.stdenv.hostPlatform.isDarwin then "mac" else "wsl"
+                    }.config.xdg.configFile."tmux/tmux.conf".text
+                }
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_tmux.py'
+                touch "$out"
+              '';
+          migration =
+            pkgs.runCommand "migration"
+              {
+                nativeBuildInputs = [
+                  pkgs.python3
+                  pkgs.bash
+                  pkgs.zsh
+                ];
+              }
+              ''
+                export DOTFILES_MIGRATOR=${./scripts/migrate.py}
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_migration.py'
+                touch "$out"
+              '';
+          lua-syntax = pkgs.runCommand "lua-syntax" { nativeBuildInputs = [ pkgs.neovim-unwrapped ]; } ''
+            export HOME="$TMPDIR/home"
+            mkdir -p "$HOME"
+            export NVIM_LOG_FILE=/dev/null
+            nvim --headless -u NONE -i NONE -n --noplugin \
+              -c 'lua for _, p in ipairs(vim.fn.glob("${./nvim}/**/*.lua", false, true)) do assert(loadfile(p)) end' \
+              -c 'qa!'
+            touch "$out"
+          '';
+          nvim-toolchain =
+            pkgs.runCommand "nvim-toolchain" { nativeBuildInputs = [ pkgs.neovim-unwrapped ]; }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                export NVIM_LOG_FILE=/dev/null
+                cd ${./.}
+                nvim --headless -u NONE -i NONE --noplugin -l nvim/tests/toolchain.lua
+                touch "$out"
+              '';
+          shell-helpers =
+            pkgs.runCommand "shell-helpers"
+              {
+                nativeBuildInputs = [
+                  pkgs.python3
+                  pkgs.bash
+                  pkgs.zsh
+                  pkgs.git
+                ];
+              }
+              ''
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                export REQUIRE_ZSH=1
+                export DOTFILES_COMMON=${./shell/common.sh}
+                export DOTFILES_BASHRC=${./bash/bashrc}
+                export DOTFILES_ZSHRC=${./zsh/zshrc}
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_shell.py'
+                touch "$out"
+              '';
+          starship-drift = pkgs.runCommand "starship-drift" { } ''
+            if ! diff -u ${./generated/starship.toml} ${starshipToml pkgs}; then
+              echo "generated/starship.toml is stale — run: nix run .#render" >&2
+              exit 1
+            fi
+            if ! diff -u ${./starship/starship.toml} ${starshipToml pkgs}; then
+              echo "starship/starship.toml is stale — run: nix run .#render" >&2
+              exit 1
+            fi
+            touch "$out"
+          '';
+        }
+        // lib.mapAttrs' (
+          name: _: lib.nameValuePair "home-${name}" self.homeConfigurations.${name}.activationPackage
+        ) (lib.filterAttrs (_: host: host.system == pkgs.stdenv.hostPlatform.system) hosts)
+      );
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {

@@ -24,7 +24,7 @@ palette: {
   };
 
   git_branch = {
-    symbol = "";
+    symbol = "";
     style = "bold ${palette.accent.gitBranch}";
     format = "[$symbol $branch ]($style)";
   };

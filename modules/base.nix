@@ -12,8 +12,6 @@
 
   programs.home-manager.enable = true;
 
-  home.username = lib.mkDefault "jason";
-
   # Pinned deliberately: this tracks the release whose state-affecting defaults
   # this configuration was written against, and is not a "current version" field.
   home.stateVersion = lib.mkDefault "24.11";

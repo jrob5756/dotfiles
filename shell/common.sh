@@ -1,54 +1,111 @@
-# Shell functions shared by bash and zsh.
-#
-# Sourced from modules/shell.nix rather than duplicated per shell, which is what
-# let the bash and zsh copies of `cup` drift apart before the Nix migration.
-# Keep everything here portable between bash and zsh: no `shopt`, no zsh-only
-# parameter expansions such as ${var:A} or ${var:t}.
-
-# Agency installs the Copilot CLI as ~/.copilot-cli/<version>/copilot and puts
-# no shim on PATH, so resolve the highest installed version at call time.
+# Keep shared functions compatible with both Bash and Zsh.
 _copilot_bin() {
     if command -v copilot >/dev/null 2>&1; then
         command -v copilot
         return 0
     fi
-    local latest
-    latest=$(ls -1 "$HOME/.copilot-cli" 2>/dev/null | sort -V | tail -n 1)
-    [[ -n $latest && -x "$HOME/.copilot-cli/$latest/copilot" ]] || return 1
-    printf '%s\n' "$HOME/.copilot-cli/$latest/copilot"
+    python3 - "$HOME/.copilot-cli" <<'PY'
+import os
+from pathlib import Path
+import re
+import sys
+
+try:
+    binaries = [
+        directory / "copilot"
+        for directory in Path(sys.argv[1]).iterdir()
+        if directory.is_dir()
+        and (directory / "copilot").is_file()
+        and os.access(directory / "copilot", os.X_OK)
+    ]
+except FileNotFoundError:
+    sys.exit(1)
+except OSError as exc:
+    print(f"cup: cannot inspect {sys.argv[1]}: {exc}", file=sys.stderr)
+    sys.exit(1)
+if not binaries:
+    sys.exit(1)
+
+def version_key(binary):
+    return tuple(
+        (1, int(part)) if part.isdecimal() else (0, part)
+        for part in re.split(r"(\d+)", binary.parent.name)
+        if part
+    )
+
+print(max(binaries, key=version_key))
+PY
+}
+
+_dotfiles_copilot() {
+    local copilot_bin
+    if ! copilot_bin=$(_copilot_bin); then
+        echo "copilot: CLI not found on PATH or in ~/.copilot-cli" >&2
+        return 1
+    fi
+    env -u TMUX "$copilot_bin" "$@"
 }
 
 # Emit "<name>\t<path>" for every directory-sourced marketplace in settings.json.
 _copilot_local_marketplaces() {
     python3 - "$1" <<'PY'
-import json, re, sys
+import json
+from pathlib import Path
+import re
+import sys
 
 try:
-    text = open(sys.argv[1], encoding="utf-8").read()
-except OSError:
+    text = Path(sys.argv[1]).read_text(encoding="utf-8")
+except FileNotFoundError:
     sys.exit(0)
-# settings.json is sometimes written with // line comments.
+except (OSError, UnicodeError) as exc:
+    print(f"cup: cannot read {sys.argv[1]}: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+# Accept whole-line comments in otherwise valid JSON.
 text = re.sub(r'^\s*//.*$', '', text, flags=re.MULTILINE)
 try:
     data = json.loads(text)
+    if not isinstance(data, dict):
+        raise ValueError("settings must be an object")
+    marketplaces = data.get("extraKnownMarketplaces")
+    if marketplaces is None:
+        marketplaces = {}
+    if not isinstance(marketplaces, dict):
+        raise ValueError("extraKnownMarketplaces must be an object")
+    records = []
+    for name, entry in marketplaces.items():
+        if not isinstance(entry, dict):
+            raise ValueError(f"marketplace {name!r} must be an object")
+        source = entry.get("source", {})
+        if not isinstance(source, dict):
+            raise ValueError(f"marketplace {name!r} source must be an object")
+        if source.get("source") != "directory":
+            continue
+        path = source.get("path")
+        if not isinstance(path, str) or not path:
+            raise ValueError(f"marketplace {name!r} needs a nonempty directory path")
+        if not name or any(char in name or char in path for char in "\0\t\r\n"):
+            raise ValueError("marketplace names and paths must be nonempty and contain no NUL, tabs, or line breaks")
+        records.append((name, path))
 except ValueError as exc:
     print(f"cup: cannot parse {sys.argv[1]}: {exc}", file=sys.stderr)
     sys.exit(1)
-for name, entry in (data.get("extraKnownMarketplaces") or {}).items():
-    source = (entry or {}).get("source") or {}
-    if source.get("source") == "directory" and source.get("path"):
-        print(f"{name}\t{source['path']}")
+for name, path in records:
+    print(f"{name}\t{path}")
 PY
 }
 
-# cup: refresh every locally-sourced copilot plugin marketplace.
-#
-# The @jason-tools / @conductor / @conductor-workflows plugins come from
-# "directory" marketplaces, so the CLI loads them straight off disk and never
-# records them under `copilot plugin list` / ~/.copilot/installed-plugins.
-# Updating them therefore means pulling the backing git repo, then asking the
-# CLI to re-read each marketplace catalog.
+# Continue independent updates, but return failure if any update was incomplete.
 cup() {
+    local tool
+    for tool in python3 git; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            printf 'cup: %s is required\n' "$tool" >&2
+            return 1
+        fi
+    done
+
     local copilot_bin
     if ! copilot_bin=$(_copilot_bin); then
         echo "cup: copilot CLI not found on PATH or in ~/.copilot-cli" >&2
@@ -56,66 +113,55 @@ cup() {
     fi
 
     local settings="${COPILOT_CONFIG_DIR:-$HOME/.copilot}/settings.json"
-    local name path found=0
-    while IFS=$'\t' read -r name path; do
-        [[ -n $name && -n $path ]] || continue
-        found=1
-        path="${path/#\~/$HOME}"
-        if [[ ! -d $path ]]; then
-            echo "cup: $name -> $path does not exist, skipping" >&2
-        elif [[ ! -d $path/.git ]]; then
-            echo "cup: $name -> $path is not a git repo, nothing to pull"
-        elif [[ -n $(git -C "$path" status --porcelain) ]]; then
-            echo "cup: $name -> $path has uncommitted changes, skipping pull" >&2
-        else
-            echo "cup: pulling $name ($path)"
-            git -C "$path" pull --ff-only || echo "cup: pull failed for $name" >&2
-        fi
-    done < <(_copilot_local_marketplaces "$settings")
-
-    (( found )) || echo "cup: no directory marketplaces found in $settings" >&2
-
-    "$copilot_bin" plugin marketplace update
-    # Covers any genuinely installed (non-directory) plugins. With only
-    # directory marketplaces this is a no-op, so don't print its noise.
-    local update_out
-    update_out=$("$copilot_bin" plugin update --all 2>&1)
-    [[ $update_out == "No plugins installed."* ]] || printf '%s\n' "$update_out"
-}
-
-# `dev [dir]` — open (or switch to) a per-directory tmux dev session.
-#
-# One session per path: reuses the session if one already exists for that
-# directory, otherwise creates it with the dev layout (nvim left ~70% + the `a`
-# copilot alias right ~30%). Works from inside or outside tmux. The session is
-# named dev-<basename>, so two different dirs sharing a basename collide — rare
-# enough to accept for readability in `tmux ls`.
-#
-# `a` and `nvim` are launched via send-keys because `a` is a shell alias: it only
-# resolves inside an interactive shell that sourced the rc files, whereas a
-# split-window command would run via `sh -c` and never see it.
-dev() {
-    local dir name base
-    dir=$(cd "${1:-$PWD}" 2>/dev/null && pwd -P) || {
-        echo "dev: no such directory: ${1:-$PWD}" >&2
+    local marketplaces
+    if ! marketplaces=$(_copilot_local_marketplaces "$settings"); then
         return 1
-    }
-    base="${dir##*/}"
-    [[ -n $base ]] || base="root"
-    # tmux treats . and : as session-name syntax, so fold anything else to _.
-    name=$(printf 'dev-%s' "$base" | tr -c '[:alnum:]_-' '_')
-
-    if ! tmux has-session -t "=${name}" 2>/dev/null; then
-        tmux new-session -d -s "$name" -c "$dir"
-        tmux split-window -h -l 30% -t "$name" -c "$dir"
-        tmux send-keys -t "$name" a C-m
-        tmux select-pane -t "$name" -L
-        tmux send-keys -t "$name" nvim C-m
     fi
 
-    if [[ -n $TMUX ]]; then
-        tmux switch-client -t "$name"
+    local marketplace_name marketplace_path worktree repo_status failed=0
+    if [[ -n $marketplaces ]]; then
+        while IFS=$'\t' read -r marketplace_name marketplace_path; do
+            case "$marketplace_path" in
+                "~") marketplace_path=$HOME ;;
+                "~/"*) marketplace_path="$HOME/${marketplace_path#\~/}" ;;
+            esac
+            if [[ ! -d $marketplace_path ]]; then
+                echo "cup: $marketplace_name -> $marketplace_path does not exist, skipping pull" >&2
+                failed=1
+            elif ! worktree=$(git -C "$marketplace_path" rev-parse --is-inside-work-tree) || [[ $worktree != true ]]; then
+                echo "cup: $marketplace_name -> $marketplace_path is not a usable Git worktree, skipping pull" >&2
+                failed=1
+            elif ! repo_status=$(git -C "$marketplace_path" status --porcelain); then
+                echo "cup: cannot inspect $marketplace_name, skipping pull" >&2
+                failed=1
+            elif [[ -n $repo_status ]]; then
+                echo "cup: $marketplace_name -> $marketplace_path has uncommitted changes, skipping pull" >&2
+                failed=1
+            else
+                echo "cup: pulling $marketplace_name ($marketplace_path)"
+                if ! git -C "$marketplace_path" pull --ff-only; then
+                    echo "cup: pull failed for $marketplace_name" >&2
+                    failed=1
+                fi
+            fi
+        done <<EOF
+$marketplaces
+EOF
     else
-        tmux attach-session -t "$name"
+        echo "cup: no directory marketplaces found in $settings" >&2
     fi
+
+    if ! "$copilot_bin" plugin marketplace update; then
+        echo "cup: marketplace catalog update failed" >&2
+        failed=1
+    fi
+
+    local update_out
+    if update_out=$("$copilot_bin" plugin update --all 2>&1); then
+        [[ $update_out == "No plugins installed."* ]] || printf '%s\n' "$update_out"
+    else
+        printf 'cup: plugin update failed\n%s\n' "$update_out" >&2
+        failed=1
+    fi
+    return "$failed"
 }

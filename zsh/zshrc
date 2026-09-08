@@ -50,45 +50,14 @@ alias ga='git add'
 # tmux). Copilot CLI checks $TMUX directly and disables its accent theme/
 # highlight as a tmux-compatibility fallback, regardless of actual terminal
 # capabilities (TERM/TERM_PROGRAM/COLORTERM don't matter) — this restores it.
-alias c="env -u TMUX copilot --yolo"
-alias p="env -u TMUX copilot -sp"
+alias c="_dotfiles_copilot --yolo"
+alias p="_dotfiles_copilot -sp"
 alias a="env -u TMUX agency copilot --yolo"
 
 # tmux
 alias t='tmux'
-# `dev [dir]` — open (or switch to) a per-directory tmux dev session.
-# One session per path: reuses the session if one already exists for that
-# directory, otherwise creates it with the dev layout (nvim left ~70% + the
-# `a` copilot alias right ~30%). Works from inside or outside tmux. The session
-# is named `dev-<basename>`, so two different dirs sharing a basename would
-# collide — rare enough to accept for readability in `tmux ls`.
-dev() {
-  local dir="${1:-$PWD}"
-  dir="${dir:A}"                        # absolute path, symlinks resolved
-  local name="dev-${dir:t}"            # dev-<basename>
-  name="${name//[^a-zA-Z0-9_-]/_}"    # sanitize (tmux dislikes . and :)
-
-  if ! tmux has-session -t "=${name}" 2>/dev/null; then
-    tmux new-session -d -s "$name" -c "$dir"
-    tmux split-window -h -l 30% -t "$name" -c "$dir"
-    tmux send-keys -t "$name" a C-m
-    tmux select-pane -t "$name" -L
-    tmux send-keys -t "$name" nvim C-m
-  fi
-
-  if [ -n "$TMUX" ]; then
-    tmux switch-client -t "$name"
-  else
-    tmux attach-session -t "$name"
-  fi
-}
-
-# Update all Copilot plugins from the jason-tools marketplace
-cup() {
-  copilot plugin list \
-    | awk -F'[ @]' '/@jason-tools/ {print $4}' \
-    | xargs -I {} copilot plugin update {}
-}
+# Resolve the rc symlink before locating the shared functions.
+source "${${(%):-%x}:A:h:h}/shell/common.sh"
 
 # Environment
 export EDITOR='vim'
@@ -107,19 +76,19 @@ source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 eval "$(starship init zsh)"
 
 # BEGIN Agency MANAGED BLOCK
-if [[ ":${PATH}:" != *":/Users/jason/.config/agency/CurrentVersion:"* ]]; then
-    export PATH="/Users/jason/.config/agency/CurrentVersion:${PATH}"
+if [[ ":${PATH}:" != *":$HOME/.config/agency/CurrentVersion:"* ]]; then
+    export PATH="$HOME/.config/agency/CurrentVersion:${PATH}"
 fi
 # END Agency MANAGED BLOCK
 
-export PATH="${PATH}:/Users/jason/.azureauth/0.9.2"
+export PATH="${PATH}:$HOME/.azureauth/0.9.2"
 
 # direnv hook
 export DIRENV_LOG_FORMAT=
 eval "$(direnv hook zsh)"
 
 # BEGIN claude-cli MANAGED BLOCK
-if [[ ":${PATH}:" != *":/Users/jason/.claude-cli/CurrentVersion:"* ]]; then
-    export PATH="/Users/jason/.claude-cli/CurrentVersion:${PATH}"
+if [[ ":${PATH}:" != *":$HOME/.claude-cli/CurrentVersion:"* ]]; then
+    export PATH="$HOME/.claude-cli/CurrentVersion:${PATH}"
 fi
 # END claude-cli MANAGED BLOCK

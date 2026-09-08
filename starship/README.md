@@ -5,32 +5,46 @@ segment. See [starship.rs](https://starship.rs/config/) for the full reference.
 
 ## Where the config lives
 
-There is no `starship.toml` in this folder any more. Starship is the one tool in
-this repo that both runs natively on Windows *and* benefits from Nix-managed
-settings, so it is defined once in Nix and rendered out:
+Starship settings are defined once in Nix and rendered to two identical files.
+`starship/starship.toml` preserves existing symlinks during migration;
+`generated/starship.toml` is the target for new Windows installations. Neither
+file should be edited by hand.
 
 | | |
 |---|---|
 | Source of truth | [`modules/starship-settings.nix`](../modules/starship-settings.nix) |
-| Colors | [`modules/palette.nix`](../modules/palette.nix), shared with tmux and Ghostty |
+| Prompt colors | [`modules/palette.nix`](../modules/palette.nix) |
 | Home Manager wiring | [`modules/starship.nix`](../modules/starship.nix) |
 | Rendered output for Windows | [`generated/starship.toml`](../generated/starship.toml) |
+| Compatibility output | [`starship/starship.toml`](./starship.toml) |
 
 ## Changing the prompt
 
 Edit `modules/starship-settings.nix`, then:
 
 ```shell
-nix run .#render          # refresh generated/starship.toml
+nix run .#render          # refresh both tracked TOML files
+```
+
+Existing manual installations see the updated file through their current
+symlink; do not activate Home Manager just to change the prompt.
+
+If the machine is **already managed by Home Manager**, also apply the settings:
+
+```shell
 home-manager switch --flake .#wsl   # or .#linux / .#mac
 ```
 
-`nix flake check` fails if `generated/starship.toml` has drifted from the Nix
-source, so a forgotten re-render can't ship silently.
+`nix flake check` compares both TOML files against the Nix source. Commit both
+outputs when changing the prompt. The renderer provides GNU coreutils itself,
+including on macOS.
 
 ## Setup
 
-**macOS / Linux / WSL** — nothing to do. Home Manager installs starship, writes
+**Existing manual setup** — keep your current symlink to
+`starship/starship.toml` until you explicitly switch to Home Manager.
+
+**After Home Manager activation** — Home Manager installs starship, writes
 `~/.config/starship.toml`, and adds the shell init for both bash and zsh.
 
 **Windows** — run `windows\bootstrap.ps1`, which symlinks

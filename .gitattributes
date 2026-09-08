@@ -4,4 +4,7 @@
 bash/inputrc text eol=lf
 bash/bashrc text eol=lf
 zsh/zshrc text eol=lf
-tmux/tmux.conf text eol=lf
+tmux/*.conf text eol=lf
+shell/*.sh text eol=lf
+generated/*.toml text eol=lf
+starship/*.toml text eol=lf

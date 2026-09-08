@@ -1,7 +1,7 @@
 { lib, config, ... }:
 {
   options.dotfiles.path = lib.mkOption {
-    type = lib.types.str;
+    type = lib.types.strMatching "/.*";
     default = "${config.home.homeDirectory}/src/dotfiles";
     description = ''
       Absolute path to the working clone of this repository.

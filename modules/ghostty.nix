@@ -5,24 +5,18 @@
   ...
 }:
 {
-  # Ghostty is the terminal on macOS and Linux. Windows has no Ghostty build, so
-  # that host uses Windows Terminal instead — see windows/README.md. Nothing here
-  # needs a Windows counterpart, which is why this module is fully declarative.
   programs.ghostty = {
     enable = true;
 
-    # On macOS Ghostty ships as a signed .app installed outside Nix; nixpkgs has
-    # no working darwin build, so manage the config only and let the app provide
-    # the binary.
+    # macOS uses the native app installed by Homebrew; Home Manager owns its config.
     package = if pkgs.stdenv.hostPlatform.isDarwin then null else pkgs.ghostty;
 
     enableBashIntegration = true;
     enableZshIntegration = true;
 
     settings = {
-      theme = "catppuccin-mocha";
+      theme = "Catppuccin Mocha";
 
-      # Repeated font-family keys are Ghostty's fallback chain, in order.
       font-family = [
         palette.font.family
         "Symbols Nerd Font Mono"
@@ -34,8 +28,7 @@
 
       background-opacity = 1;
 
-      # Ghostty counts scrollback in bytes, not lines, unlike tmux's
-      # history-limit. ~10 MB is roughly the old WezTerm 10k-line setting.
+      # Ghostty measures scrollback in bytes, not lines.
       scrollback-limit = 10000000;
     }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
