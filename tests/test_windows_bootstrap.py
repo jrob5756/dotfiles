@@ -153,10 +153,13 @@ function New-Item {
     def test_install_failure_rolls_back_prior_changes(self):
         self.seed_conflicts()
         prefix = """
+$global:FixtureReplacementFailed = $false
 function Move-Item {
     [CmdletBinding()]
     param([string] $LiteralPath, [string] $Destination, [switch] $Force)
-    if ($LiteralPath -like '*.dotfiles-*' -and $Destination -like '*starship.toml') {
+    if (-not $global:FixtureReplacementFailed -and
+        $LiteralPath -like '*.dotfiles-*' -and $Destination -like '*starship.toml') {
+        $global:FixtureReplacementFailed = $true
         throw 'Fixture: replacement failed'
     }
     Microsoft.PowerShell.Management\\Move-Item @PSBoundParameters
@@ -164,6 +167,8 @@ function Move-Item {
 """
         result = self.invoke("-Apply", prefix=prefix)
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Fixture: replacement failed", result.stdout + result.stderr)
+        self.assertNotIn("Automatic rollback failed", result.stdout + result.stderr)
         self.assert_originals()
         self.assertEqual(json.loads(self.manifest().read_text(encoding="utf-8-sig"))["State"], "RolledBack")
 
