@@ -1,40 +1,53 @@
 # Starship prompt config
 
-Minimal prompt with a left border, custom colors, and a git branch/status segment. See [starship.rs](https://starship.rs/config/) for the full config reference.
+Minimal prompt with a left border, custom colors, and a git branch/status
+segment. See [starship.rs](https://starship.rs/config/) for the full reference.
+
+## Where the config lives
+
+Starship settings are defined once in Nix and rendered to two identical files.
+`starship/starship.toml` preserves existing symlinks during migration;
+`generated/starship.toml` is the target for new Windows installations. Neither
+file should be edited by hand.
+
+| | |
+|---|---|
+| Source of truth | [`modules/starship-settings.nix`](../modules/starship-settings.nix) |
+| Prompt colors | [`modules/palette.nix`](../modules/palette.nix) |
+| Home Manager wiring | [`modules/starship.nix`](../modules/starship.nix) |
+| Rendered output for Windows | [`generated/starship.toml`](../generated/starship.toml) |
+| Compatibility output | [`starship/starship.toml`](./starship.toml) |
+
+## Changing the prompt
+
+Edit `modules/starship-settings.nix`, then:
+
+```shell
+nix run .#render          # refresh both tracked TOML files
+```
+
+Existing manual installations see the updated file through their current
+symlink; do not activate Home Manager just to change the prompt.
+
+If the machine is **already managed by Home Manager**, also apply the settings:
+
+```shell
+home-manager switch --flake .#wsl   # or .#linux / .#mac
+```
+
+`nix flake check` compares both TOML files against the Nix source. Commit both
+outputs when changing the prompt. The renderer provides GNU coreutils itself,
+including on macOS.
 
 ## Setup
 
-### 1. Install starship
+**Existing manual setup** — keep your current symlink to
+`starship/starship.toml` until you explicitly switch to Home Manager.
 
-macOS: `brew install starship`
-Linux/Windows: see the [official install instructions](https://starship.rs/guide/#-installation)
+**After Home Manager activation** — Home Manager installs starship, writes
+`~/.config/starship.toml`, and adds the shell init for both bash and zsh.
 
-### 2. Symlink the config
-
-macOS/Linux:
-
-```shell
-mkdir -p ~/.config
-ln -s ~/dotfiles/starship/starship.toml ~/.config/starship.toml
-```
-
-Windows (PowerShell) — requires Developer Mode enabled, or running as Administrator:
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
-New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\starship.toml" -Target "$env:USERPROFILE\dotfiles\starship\starship.toml"
-```
-
-### 3. Initialize in your shell
-
-Add to `~/.zshrc` (or the equivalent for your shell):
-
-```shell
-eval "$(starship init zsh)"
-```
-
-For PowerShell, add to your `$PROFILE`:
-
-```powershell
-Invoke-Expression (&starship init powershell)
-```
+**Windows** — run `windows\bootstrap.ps1`, which symlinks
+`generated/starship.toml` to `~/.config/starship.toml`. The tracked PowerShell
+profile already runs `starship init powershell`. See
+[`windows/README.md`](../windows/README.md).

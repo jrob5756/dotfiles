@@ -1,5 +1,3 @@
--- Customize Conform formatters
-
 ---@type LazySpec
 return {
   "stevearc/conform.nvim",

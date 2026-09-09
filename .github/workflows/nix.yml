@@ -1,0 +1,38 @@
+name: Dotfiles
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Windows bootstrap regressions
+        shell: pwsh
+        run: |
+          $env:REQUIRE_PWSH = "1"
+          python -m unittest discover -s tests -p 'test_windows*.py' -v
+  nix:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - run: nix flake check --no-update-lock-file --print-build-logs
+      - name: Rendered files remain unchanged
+        run: |
+          nix run --no-update-lock-file .#render
+          git diff --exit-code -- generated/starship.toml starship/starship.toml
