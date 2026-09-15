@@ -14,6 +14,34 @@ let
       case ":$PATH:" in *":$HOME/.dotnet:"*) ;; *) export PATH="$HOME/.dotnet:$PATH" ;; esac
     fi
   '';
+  # macOS /etc/zprofile runs path_helper after the loaders put Nix on PATH. It
+  # rebuilds PATH from /etc/paths.d, hoisting /opt/homebrew/bin ahead of the Nix
+  # profile, so Homebrew shadows every Nix-installed tool. nix-daemon.sh cannot
+  # repair this: it returns early once __ETC_PROFILE_NIX_SOURCED is exported.
+  # Restore precedence from the interactive rc, which runs after path_helper.
+  # Dropping an existing copy first keeps this idempotent in nested shells.
+  darwinNixPath = lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+    _dotfiles_path_prepend() {
+      [ -d "$1" ] || return 0
+      _dotfiles_rest="$PATH"
+      _dotfiles_kept=""
+      while [ -n "$_dotfiles_rest" ]; do
+        _dotfiles_dir="''${_dotfiles_rest%%:*}"
+        case "$_dotfiles_rest" in
+          *:*) _dotfiles_rest="''${_dotfiles_rest#*:}" ;;
+          *) _dotfiles_rest="" ;;
+        esac
+        if [ -n "$_dotfiles_dir" ] && [ "$_dotfiles_dir" != "$1" ]; then
+          _dotfiles_kept="''${_dotfiles_kept:+$_dotfiles_kept:}$_dotfiles_dir"
+        fi
+      done
+      export PATH="$1''${_dotfiles_kept:+:$_dotfiles_kept}"
+      unset _dotfiles_rest _dotfiles_kept _dotfiles_dir
+    }
+    _dotfiles_path_prepend /nix/var/nix/profiles/default/bin
+    _dotfiles_path_prepend "$HOME/.nix-profile/bin"
+    unset -f _dotfiles_path_prepend
+  '';
 in
 {
   home.shellAliases = {
@@ -73,6 +101,7 @@ in
       l = lib.mkForce "ls -CF";
     };
     initExtra = ''
+      ${darwinNixPath}
       ${environment}
       if [ -s "$NVM_DIR/bash_completion" ]; then . "$NVM_DIR/bash_completion"; fi
       ${common}
@@ -112,6 +141,7 @@ in
         bindkey '^[[C' forward-suggestion-word
         bindkey '^[OC' forward-suggestion-word
         bindkey '^[f' autosuggest-accept
+        ${darwinNixPath}
         ${environment}
         ${common}
       '')

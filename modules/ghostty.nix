@@ -17,6 +17,13 @@
     settings = {
       theme = "Catppuccin Mocha";
 
+      # Ghostty sets TERM=xterm-ghostty, which most remote hosts lack, so tmux
+      # and Neovim abort there with "missing or unsuitable terminal".
+      # ssh-terminfo installs the entry on the remote on first connect (cached
+      # per host); ssh-env degrades TERM when that is not possible. The other
+      # values repeat Ghostty's defaults, which the key replaces wholesale.
+      shell-integration-features = "cursor,no-sudo,title,path,ssh-env,ssh-terminfo";
+
       font-family = [
         palette.font.family
         "Symbols Nerd Font Mono"

@@ -46,6 +46,22 @@ class TmuxTests(unittest.TestCase):
                     }
                     for option, value in expected.items():
                         self.assertEqual(tmux("show-options", "-gv", option), value)
+                    self.assertEqual(tmux("show-options", "-sv", "extended-keys"), "always")
+                    self.assertEqual(
+                        tmux("show-options", "-sv", "extended-keys-format"), "csi-u"
+                    )
+                    tmux("source-file", str(config))
+                    terminal_features = tmux(
+                        "show-options", "-sv", "terminal-features"
+                    ).splitlines()
+                    self.assertEqual(
+                        terminal_features.count("xterm-ghostty:extkeys"), 1
+                    )
+                    root_bindings = tmux("list-keys", "-T", "root")
+                    self.assertRegex(
+                        root_bindings,
+                        r"(?m)^bind-key\s+-T root S-Enter\s+send-keys Escape Enter$",
+                    )
                     self.assertEqual(len(tmux("list-panes", "-t", "dev").splitlines()), 1)
                     self.assertEqual(tmux("show-hooks", "-g", "session-created"), "session-created")
                     bindings = {}
