@@ -7,6 +7,7 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **`Ctrl-h/j/k/l`** — move between tmux panes *and* Neovim splits with the same keys (seamless, no prefix needed), via `vim-tmux-navigator`. Mirrors the window navigation already set up in the `nvim/` config.
 - **Mouse support on** — click to select a pane, drag borders to resize, scroll to scroll a pane's history.
 - **`prefix |`** / **`prefix \`** / **`prefix _`** / **`prefix -`** — split the current pane right / left / down / up, opening in the current pane's directory (the `|` vsplit matches the mapping in the nvim config). Unshifted keys put the new pane above or to the left; shifted keys put it below or to the right.
+- **Obvious active pane**: the active pane gets a heavy, bold blue border with arrow indicators. Inactive borders are muted, and default text in inactive panes is dimmed. Backgrounds stay `terminal`, so transparency is preserved.
 - **`prefix r`** — reload config without restarting tmux.
 - **Sessions survive reboots** — `tmux-resurrect` + `tmux-continuum` auto-save every 15 minutes and auto-restore when the tmux server next starts. See [Session persistence](#session-persistence) below.
 - Copy mode uses vi-style keys (`v` to start selection, `y` to yank) since that matches Neovim muscle memory better than tmux's Emacs-style defaults.
