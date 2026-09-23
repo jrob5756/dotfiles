@@ -4,7 +4,7 @@
     "actions": 
     [
         {
-            "command": 
+            "command":
             {
                 "action": "copy",
                 "singleLine": false
@@ -16,7 +16,7 @@
             "id": "User.paste"
         },
         {
-            "command": 
+            "command":
             {
                 "action": "splitPane",
                 "split": "auto",
@@ -27,6 +27,26 @@
         {
             "command": "find",
             "id": "User.find"
+        },
+        {
+            "command":
+            {
+                "action": "adjustFontSize",
+                "delta": 1
+            },
+            "id": "User.increaseFontSize"
+        },
+        {
+            "command":
+            {
+                "action": "adjustFontSize",
+                "delta": -1
+            },
+            "id": "User.decreaseFontSize"
+        },
+        {
+            "command": "resetFontSize",
+            "id": "User.resetFontSize"
         },
         {
             "command": 
@@ -40,6 +60,7 @@
     "copyFormatting": "none",
     "copyOnSelect": false,
     "defaultProfile": "{33d72181-d23d-402d-8874-8b2ae4c055f7}",
+    "experimental.scrollToZoom": true,
     "keybindings": 
     [
         {
@@ -49,6 +70,38 @@
         {
             "id": "User.find",
             "keys": "ctrl+shift+f"
+        },
+        {
+            "id": "User.increaseFontSize",
+            "keys": "ctrl+plus"
+        },
+        {
+            "id": "User.increaseFontSize",
+            "keys": "ctrl+="
+        },
+        {
+            "id": "User.increaseFontSize",
+            "keys": "ctrl+shift+="
+        },
+        {
+            "id": "User.increaseFontSize",
+            "keys": "ctrl+numpad_plus"
+        },
+        {
+            "id": "User.decreaseFontSize",
+            "keys": "ctrl+minus"
+        },
+        {
+            "id": "User.decreaseFontSize",
+            "keys": "ctrl+-"
+        },
+        {
+            "id": "User.decreaseFontSize",
+            "keys": "ctrl+numpad_minus"
+        },
+        {
+            "id": "User.resetFontSize",
+            "keys": "ctrl+0"
         },
         {
             "id": "User.paste",

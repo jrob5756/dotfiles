@@ -17,6 +17,36 @@ if os.environ.get("REQUIRE_PWSH") == "1" and not PWSH:
 class WindowsSeedTests(unittest.TestCase):
     def test_terminal_preserves_user_scheme_and_images(self):
         settings = json.loads((WINDOWS / "windows-terminal/settings.json").read_text())
+        self.assertIs(settings["experimental.scrollToZoom"], True)
+        bindings = {
+            binding["keys"]: binding["id"]
+            for binding in settings["keybindings"]
+        }
+        self.assertEqual(
+            {
+                "ctrl+plus": "User.increaseFontSize",
+                "ctrl+=": "User.increaseFontSize",
+                "ctrl+shift+=": "User.increaseFontSize",
+                "ctrl+numpad_plus": "User.increaseFontSize",
+                "ctrl+minus": "User.decreaseFontSize",
+                "ctrl+-": "User.decreaseFontSize",
+                "ctrl+numpad_minus": "User.decreaseFontSize",
+                "ctrl+0": "User.resetFontSize",
+            },
+            {
+                key: bindings[key]
+                for key in (
+                    "ctrl+plus",
+                    "ctrl+=",
+                    "ctrl+shift+=",
+                    "ctrl+numpad_plus",
+                    "ctrl+minus",
+                    "ctrl+-",
+                    "ctrl+numpad_minus",
+                    "ctrl+0",
+                )
+            },
+        )
         profiles = settings["profiles"]["list"]
         ubuntu = next(profile for profile in profiles if profile["name"] == "Ubuntu")
         self.assertEqual(ubuntu["colorScheme"], "UbuntuLegit")
