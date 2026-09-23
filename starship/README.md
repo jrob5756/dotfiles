@@ -1,7 +1,10 @@
 # Starship prompt config
 
-Minimal prompt with a left border, custom colors, and a git branch/status
-segment. See [starship.rs](https://starship.rs/config/) for the full reference.
+Minimal prompt with a left border and custom colors. The first line shows the
+directory, git branch/status, and, when relevant, the Python version and
+virtualenv, the current Kubernetes context, and how long the last command took
+(2 seconds or more). See [starship.rs](https://starship.rs/config/) for the
+full reference.
 
 ## Where the config lives
 

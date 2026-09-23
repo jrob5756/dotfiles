@@ -29,7 +29,12 @@ C/C++ compiler usable by Neovim's native plugins are needed; see
 Python must resolve on PATH, not the Microsoft Store alias stub.
 
 Optional terminal: `winget install --exact --id Microsoft.WindowsTerminal --source winget`.
-Install the `FiraCode Nerd Font Mono` font separately if using the seed. Claude
+If using the seed, install JetBrainsMono Nerd Font
+(`winget install --exact --id DEVCOM.JetBrainsMonoNerdFont --source winget`,
+which installs machine-wide). Windows lists it as `JetBrainsMono NF`, which is
+the face name the seed uses. The seed's default profile, **Ubuntu (tmux)**,
+opens WSL straight into tmux, reattaching to the most recent session if the
+server is running; the plain **Ubuntu** profile starts without tmux. Claude
 and your custom Agency installation are separate prerequisites for `c` and `a`;
 bootstrap does not install or configure either. `c` calls
 `claude --dangerously-skip-permissions`; `a` retains `agency copilot --yolo`.

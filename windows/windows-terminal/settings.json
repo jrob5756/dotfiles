@@ -59,8 +59,7 @@
     ],
     "copyFormatting": "none",
     "copyOnSelect": false,
-    "defaultProfile": "{33d72181-d23d-402d-8874-8b2ae4c055f7}",
-    "experimental.scrollToZoom": true,
+    "defaultProfile": "{d9f63db0-c7e9-4039-a3c2-3f9c804e9c10}",
     "keybindings": 
     [
         {
@@ -128,8 +127,8 @@
         {
             "font": 
             {
-                "face": "FiraCode Nerd Font Mono",
-                "size": 12
+                "face": "JetBrainsMono NF",
+                "size": 13
             }
         },
         "list": 
@@ -160,6 +159,19 @@
                 "name": "Ubuntu",
                 "opacity": 95,
                 "source": "CanonicalGroupLimited.Ubuntu_79rhkp1fndgsc"
+            },
+            {
+                "backgroundImage": "%OneDriveCommercial%\\Pictures\\img\\cmd\\hulk.png",
+                "backgroundImageAlignment": "bottomRight",
+                "backgroundImageOpacity": 0.3,
+                "backgroundImageStretchMode": "none",
+                "colorScheme": "UbuntuLegit",
+                "commandline": "wsl.exe -d Ubuntu --cd ~ --exec bash -lic \"tmux attach-session 2>/dev/null || tmux new-session\"",
+                "guid": "{d9f63db0-c7e9-4039-a3c2-3f9c804e9c10}",
+                "hidden": false,
+                "icon": "https://assets.ubuntu.com/v1/49a1a858-favicon-32x32.png",
+                "name": "Ubuntu (tmux)",
+                "opacity": 95
             },
             {
                 "backgroundImage": "%OneDriveCommercial%\\Pictures\\img\\cmd\\venom.png",

@@ -6,6 +6,9 @@
     gitStatus = "#EC6A77";
     success = "#B5D99C";
     error = "#EC6A77";
+    python = "#F2D98C";
+    kubernetes = "#8FA8F0";
+    duration = "#8D96A8";
   };
 
   font = {

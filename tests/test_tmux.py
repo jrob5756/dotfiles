@@ -40,9 +40,11 @@ class TmuxTests(unittest.TestCase):
                 try:
                     tmux("-f", str(config), "new-session", "-d", "-s", "dev", "sleep 60")
                     expected = {
-                        "prefix": "C-a", "mouse": "on", "history-limit": "10000",
+                        "prefix": "C-a", "mouse": "on", "history-limit": "50000",
                         "escape-time": "10", "status-position": "top",
                         "set-clipboard": "on", "allow-passthrough": "on",
+                        "detach-on-destroy": "off",
+                        "status-style": "bg=default,fg=#cdd6f4",
                     }
                     for option, value in expected.items():
                         self.assertEqual(tmux("show-options", "-gv", option), value)
@@ -71,6 +73,14 @@ class TmuxTests(unittest.TestCase):
                         bindings[words[table + 2]] = words[table + 3:]
                     self.assertIn("confirm-before", bindings["&"])
                     self.assertNotIn("split-window", bindings.get("D", []))
+                    self.assertEqual(
+                        bindings["c"], ["new-window", "-c", "#{pane_current_path}"]
+                    )
+                    if source != configs[0]:
+                        for key in ("s", "f"):
+                            self.assertIn("display-popup", bindings[key])
+                            switcher = bindings[key][-1]
+                            self.assertTrue(os.access(switcher, os.X_OK), switcher)
                 finally:
                     subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

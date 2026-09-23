@@ -9,13 +9,18 @@
 add_newline = true
 command_timeout = 1000
 format = """
-[┌──](#6C7A96) $directory$git_branch$git_status
+[┌──](#6C7A96) $directory$git_branch$git_status$python$kubernetes$cmd_duration
 [│](#6C7A96)
 [└─](#6C7A96) $character"""
 
 [character]
 error_symbol = "[❯](bold #EC6A77)"
 success_symbol = "[❯](bold #B5D99C)"
+
+[cmd_duration]
+format = "[took $duration ]($style)"
+min_time = 2000
+style = "#8D96A8"
 
 [directory]
 format = "[$path ]($style)"
@@ -29,5 +34,16 @@ style = "bold #5EC4FF"
 symbol = ""
 
 [git_status]
-format = "[$all_status$ahead_behind]($style)"
+format = "([$all_status$ahead_behind ]($style))"
 style = "bold #EC6A77"
+
+[kubernetes]
+disabled = false
+format = '[$symbol$context( \($namespace\)) ]($style)'
+style = "bold #8FA8F0"
+symbol = "☸ "
+
+[python]
+format = '[$symbol$version( \($virtualenv\)) ]($style)'
+style = "bold #F2D98C"
+symbol = " "

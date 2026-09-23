@@ -94,8 +94,8 @@ in
       "ignoredups"
       "ignorespace"
     ];
-    historySize = 1000;
-    historyFileSize = 2000;
+    historySize = 50000;
+    historyFileSize = 100000;
     shellAliases = {
       ll = lib.mkForce "ls -alF";
       l = lib.mkForce "ls -CF";
@@ -103,6 +103,10 @@ in
     initExtra = ''
       ${darwinNixPath}
       ${environment}
+      HISTTIMEFORMAT='%F %T  '
+      # Share history between concurrent shells (tmux panes): save each command
+      # as it runs and pick up commands saved by the others.
+      PROMPT_COMMAND="''${PROMPT_COMMAND:+$PROMPT_COMMAND; }history -a; history -n"
       if [ -s "$NVM_DIR/bash_completion" ]; then . "$NVM_DIR/bash_completion"; fi
       ${common}
       if [ -r "$HOME/.bash_aliases" ]; then . "$HOME/.bash_aliases"; fi
@@ -150,6 +154,52 @@ in
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
+  };
+
+  # Ctrl-R history, Ctrl-T files, Alt-C directories; tmux popups when inside tmux.
+  programs.fzf =
+    let
+      fd = lib.getExe pkgs.fd;
+    in
+    {
+      enable = true;
+      enableBashIntegration = true;
+      enableZshIntegration = true;
+      defaultCommand = "${fd} --type f --hidden --follow --exclude .git";
+      fileWidget.command = "${fd} --type f --hidden --follow --exclude .git";
+      changeDirWidget.command = "${fd} --type d --hidden --follow --exclude .git";
+      defaultOptions = [
+        "--height=40%"
+        "--layout=reverse"
+        "--border"
+      ];
+      # Catppuccin Mocha, leaving the background to the terminal.
+      colors = {
+        "bg+" = "#313244";
+        spinner = "#f5e0dc";
+        hl = "#f38ba8";
+        fg = "#cdd6f4";
+        header = "#f38ba8";
+        info = "#cba6f7";
+        pointer = "#f5e0dc";
+        marker = "#b4befe";
+        "fg+" = "#cdd6f4";
+        prompt = "#cba6f7";
+        "hl+" = "#f38ba8";
+        selected-bg = "#45475a";
+        border = "#45475a";
+      };
+      tmux = {
+        enableShellIntegration = true;
+        shellIntegrationOptions = [ "-p 80%,60%" ];
+      };
+    };
+
+  # `z <part-of-path>` jumps to a frequently used directory; `zi` picks one with fzf.
+  programs.zoxide = {
+    enable = true;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
   };
 
   # Installers may edit the writable loaders; Nix owns only their sourced payloads.

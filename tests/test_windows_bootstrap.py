@@ -17,7 +17,6 @@ if os.environ.get("REQUIRE_PWSH") == "1" and not PWSH:
 class WindowsSeedTests(unittest.TestCase):
     def test_terminal_preserves_user_scheme_and_images(self):
         settings = json.loads((WINDOWS / "windows-terminal/settings.json").read_text())
-        self.assertIs(settings["experimental.scrollToZoom"], True)
         bindings = {
             binding["keys"]: binding["id"]
             for binding in settings["keybindings"]
@@ -50,10 +49,19 @@ class WindowsSeedTests(unittest.TestCase):
         profiles = settings["profiles"]["list"]
         ubuntu = next(profile for profile in profiles if profile["name"] == "Ubuntu")
         self.assertEqual(ubuntu["colorScheme"], "UbuntuLegit")
+        tmux = next(profile for profile in profiles if profile["name"] == "Ubuntu (tmux)")
+        self.assertEqual(settings["defaultProfile"], tmux["guid"])
+        # --exec keeps wsl.exe from re-splitting the script; -l puts Nix's tmux on PATH.
+        self.assertIn("--exec bash -lic", tmux["commandline"])
+        # Windows exposes the Nerd Font's short family name, not "JetBrainsMono Nerd Font".
+        self.assertEqual(
+            settings["profiles"]["defaults"]["font"],
+            {"face": "JetBrainsMono NF", "size": 13},
+        )
         images = [profile["backgroundImage"] for profile in profiles if "backgroundImage" in profile]
         self.assertEqual(
             [image.rsplit("\\", 1)[-1] for image in images],
-            ["thor.png", "hulk.png", "venom.png", "thor.png", "deadpool.png"],
+            ["thor.png", "hulk.png", "hulk.png", "venom.png", "thor.png", "deadpool.png"],
         )
         self.assertTrue(all(image.startswith("%OneDriveCommercial%\\") for image in images))
 

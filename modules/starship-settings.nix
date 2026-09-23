@@ -12,7 +12,7 @@ palette: {
   add_newline = true;
 
   format = ''
-    [┌──](${palette.accent.border}) $directory$git_branch$git_status
+    [┌──](${palette.accent.border}) $directory$git_branch$git_status$python$kubernetes$cmd_duration
     [│](${palette.accent.border})
     [└─](${palette.accent.border}) $character'';
 
@@ -31,7 +31,28 @@ palette: {
 
   git_status = {
     style = "bold ${palette.accent.gitStatus}";
-    format = "[$all_status$ahead_behind]($style)";
+    format = "([$all_status$ahead_behind ]($style))";
+  };
+
+  # Shown only in Python projects; includes the active virtualenv.
+  python = {
+    symbol = " ";
+    style = "bold ${palette.accent.python}";
+    format = "[$symbol$version( \\($virtualenv\\)) ]($style)";
+  };
+
+  # Starship ships this disabled; shown only when a kubeconfig has a current context.
+  kubernetes = {
+    disabled = false;
+    symbol = "☸ ";
+    style = "bold ${palette.accent.kubernetes}";
+    format = "[$symbol$context( \\($namespace\\)) ]($style)";
+  };
+
+  cmd_duration = {
+    min_time = 2000;
+    style = palette.accent.duration;
+    format = "[took $duration ]($style)";
   };
 
   character = {

@@ -5,6 +5,7 @@
     ./options.nix
     ./packages.nix
     ./shell.nix
+    ./git.nix
     ./starship.nix
     ./tmux.nix
     ./nvim.nix
