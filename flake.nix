@@ -172,7 +172,6 @@
                 ];
               }
               ''
-                export DOTFILES_LEGACY_TMUX_CONFIG=${./tmux/tmux.conf}
                 export DOTFILES_TMUX_CONFIG=${
                   pkgs.writeText "tmux-managed.conf"
                     self.homeConfigurations.${
@@ -232,10 +231,22 @@
                 mkdir -p "$HOME"
                 export REQUIRE_ZSH=1
                 export DOTFILES_COMMON=${./shell/common.sh}
-                export DOTFILES_BASHRC=${./bash/bashrc}
-                export DOTFILES_ZSHRC=${./zsh/zshrc}
                 export PYTHONDONTWRITEBYTECODE=1
                 python3 -m unittest discover -s ${./tests} -p 'test_shell.py'
+                touch "$out"
+              '';
+          nix-lint =
+            pkgs.runCommand "nix-lint"
+              {
+                nativeBuildInputs = [
+                  pkgs.statix
+                  pkgs.deadnix
+                ];
+              }
+              ''
+                cd ${./.}
+                statix check --config ${./statix.toml} .
+                deadnix --fail .
                 touch "$out"
               '';
           starship-drift = pkgs.runCommand "starship-drift" { } ''
@@ -258,13 +269,14 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           packages = [
-            pkgs.nixfmt
+            pkgs.nixfmt-tree
             pkgs.statix
+            pkgs.deadnix
             pkgs.home-manager
           ];
         };
       });
 
-      formatter = forAllSystems (pkgs: pkgs.nixfmt);
+      formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
     };
 }

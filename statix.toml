@@ -1,0 +1,2 @@
+# Home Manager modules conventionally spell out `home.foo`/`programs.bar` per key.
+disabled = [ "repeated_keys" ]

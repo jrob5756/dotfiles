@@ -68,9 +68,20 @@ return {
     autocmds = {
       neotree_auto_open = {
         {
+          event = "StdinReadPre",
+          desc = "Remember that Neovim is reading stdin",
+          callback = function() vim.g.dotfiles_started_with_stdin = true end,
+        },
+        {
           event = "VimEnter",
-          desc = "Open Neo-Tree explorer on startup",
-          callback = function() require("neo-tree.command").execute { action = "show" } end,
+          desc = "Open Neo-Tree explorer on a bare startup",
+          -- Skip file arguments so $EDITOR uses (git commit, kubectl edit) stay uncluttered;
+          -- Neo-tree already takes over directory arguments itself.
+          callback = function()
+            if vim.fn.argc() == 0 and not vim.g.dotfiles_started_with_stdin then
+              require("neo-tree.command").execute { action = "show" }
+            end
+          end,
         },
       },
     },

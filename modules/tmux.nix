@@ -2,9 +2,41 @@
   config,
   lib,
   pkgs,
+  palette,
   ...
 }:
 let
+  c = palette.catppuccin;
+
+  theme = ''
+    # Preserve the outer terminal's background and transparency; dim only inactive panes' default text.
+    set -g window-style 'fg=${c.overlay1},bg=terminal'
+    set -g window-active-style 'fg=terminal,bg=terminal'
+
+    # Make the active pane obvious.
+    set -g pane-border-lines heavy
+    set -g pane-border-indicators arrows
+    set -g pane-border-style 'fg=${c.surface1}'
+    set -g pane-active-border-style 'fg=${c.blue},bold'
+
+    # Status bar on the terminal background. The session badge turns red while
+    # the prefix is pending.
+    set -g status-style 'bg=default,fg=${c.text}'
+    set -g status-left-length 40
+    set -g status-left '#[fg=${c.base},bold]#{?client_prefix,#[bg=${c.red}],#[bg=${c.blue}]} #S #[default] '
+    set -g status-right-length 60
+    set -g status-right '#[fg=${c.yellow}]#{?window_zoomed_flag,ZOOM ,}#[fg=${c.overlay1}]%a %H:%M #[fg=${c.base},bg=${c.lavender},bold] #h '
+    setw -g window-status-separator '''
+    setw -g window-status-format '#[fg=${c.overlay1}] #I:#W '
+    setw -g window-status-current-format '#[fg=${c.base},bg=${c.mauve},bold] #I:#W '
+    setw -g window-status-activity-style 'fg=${c.yellow}'
+    set -g message-style 'bg=${c.surface0},fg=${c.text}'
+    set -g message-command-style 'bg=${c.surface0},fg=${c.text}'
+    setw -g mode-style 'bg=${c.surface1},fg=${c.text}'
+    set -g popup-border-style 'fg=${c.blue}'
+    set -g popup-border-lines rounded
+  '';
+
   sessionSwitcher = pkgs.writeShellApplication {
     name = "tmux-session-switcher";
     runtimeInputs = [
@@ -93,12 +125,18 @@ in
       }
     ];
 
-    extraConfig = builtins.readFile ../tmux/settings.conf + ''
-
+    extraConfig = ''
       # prefix s: fuzzy session switcher; typing a new name creates that session.
       bind s display-popup -E -w 60% -h 50% -T ' sessions ' ${lib.getExe sessionSwitcher}
       # prefix f: fuzzy window switcher across all sessions, with a preview.
       bind f display-popup -E -w 85% -h 70% -T ' windows ' ${lib.getExe windowSwitcher}
     '';
   };
+
+  # Plugins load between Home Manager's base options and extraConfig. The theme
+  # must come before them: continuum hooks its autosave into status-right when it
+  # loads, so setting status-right afterwards silently disables autosave.
+  xdg.configFile."tmux/tmux.conf".text = lib.mkOrder 600 (
+    builtins.readFile ../tmux/settings.conf + "\n" + theme
+  );
 }

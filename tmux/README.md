@@ -11,7 +11,7 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **`prefix s`** — fuzzy session switcher in a popup (most recently used first). Type the name of a session that doesn't exist and press Enter to create it. The built-in tree view is still on `prefix w`.
 - **`prefix f`** — fuzzy window switcher across all sessions (most recently active first), with a live preview of the highlighted window. Replaces tmux's built-in find-window.
 - **Closing a session doesn't exit tmux**: `detach-on-destroy off` moves you to another session when the last window of the current one closes.
-- **Catppuccin status bar** on the terminal background: session badge on the left (turns red while the prefix is pending), windows in the middle, `ZOOM` when a pane is zoomed, then time and host.
+- **Catppuccin status bar** (colours from `modules/palette.nix`) on the terminal background: session badge on the left (turns red while the prefix is pending), windows in the middle, `ZOOM` when a pane is zoomed, then time and host.
 - **50,000 lines of scrollback** per pane.
 - **Obvious active pane**: the active pane gets a heavy, bold blue border with arrow indicators. Inactive borders are muted, and default text in inactive panes is dimmed. Backgrounds stay `terminal`, so transparency is preserved.
 - **`prefix r`** — reload config without restarting tmux.
@@ -30,11 +30,16 @@ See the root [`README.md`](../README.md) for the full bootstrap.
 
 `modules/tmux.nix` owns the package, the plugins, and the settings the Home
 Manager module models directly — prefix, mouse, base index, key mode, escape
-time, history limit, and terminal type. It also builds the `prefix s` session
-and `prefix f` window switcher scripts, since those bindings need Nix store
-paths. Everything else —
-the bindings, status bar, pane navigation, and copy-mode setup — stays in
-`settings.conf` in tmux's own syntax and is read in as `extraConfig`.
+time, history limit, and terminal type. It also renders the colour theme from
+`modules/palette.nix` and builds the `prefix s` session and `prefix f` window
+switcher scripts, since those bindings need Nix store paths. The remaining
+bindings, terminal features, and copy-mode setup stay in `settings.conf` in
+tmux's own syntax.
+
+`settings.conf` and the theme are placed **before** the plugins in the
+generated file. tmux-continuum hooks its autosave into `status-right` when it
+loads, so anything that sets `status-right` after the plugins silently disables
+autosave. `tests/test_tmux.py` guards that ordering.
 
 Don't set any of the Nix-owned values in `settings.conf`: they would be applied
 twice and the two copies would drift.
@@ -45,15 +50,6 @@ twice and the two copies would drift.
 `settings.conf` only after a `home-manager switch`, since the installed file is a
 copy in the Nix store. Changes to plugins or the Nix-owned settings always need
 a switch.
-
-### Existing manual installations
-
-`tmux/tmux.conf` is a complete compatibility snapshot, including TPM, for old
-`~/.tmux.conf` symlinks. It is not consumed by Home Manager. It mirrors
-`settings.conf` except for the `prefix s` and `prefix f` switchers, which are
-managed only. The migration backs up that old entry point so the XDG configuration can
-take over. Do not delete TPM or restart a working server just to prepare the
-migration.
 
 ## Session persistence
 
@@ -76,4 +72,5 @@ Caveats worth knowing:
 
 ## Notes
 
+- `vim-tmux-navigator` takes over `Ctrl-l`, so the shell's clear-screen moves to **`prefix Ctrl-l`**.
 - `vim-tmux-navigator` requires the matching side to be set up in Neovim too (a plugin, not just the `<C-h/j/k/l>` mappings already in `nvim/lua/plugins/astrocore.lua`) for the pane-vs-split detection to work perfectly. If `<C-h/j/k/l>` ever stops crossing between tmux and Neovim seamlessly, that's the first thing to check.

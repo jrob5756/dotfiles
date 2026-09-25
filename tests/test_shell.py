@@ -287,32 +287,6 @@ printf '%s\\n' "${TMUX-unset}" "$#" "$1" "$2"
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.splitlines(), ["unset", "2", "--yolo", "path with spaces", "parent"])
 
-    def test_manual_rc_follows_relative_symlinks_to_shared_helpers(self):
-        if self.shell == BASH:
-            content = Path(os.environ.get("DOTFILES_BASHRC", ROOT / "bash/bashrc")).read_text()
-            start = content.index("_dotfiles_bashrc=${BASH_SOURCE[0]}")
-            end = content.index("unset _dotfiles_bashrc _dotfiles_dir", start)
-            loader = content[start:end] + "unset _dotfiles_bashrc _dotfiles_dir\n"
-            shell_dir = "bash"
-        else:
-            content = Path(os.environ.get("DOTFILES_ZSHRC", ROOT / "zsh/zshrc")).read_text()
-            loader = next(line for line in content.splitlines()
-                          if line.startswith("source ") and "/shell/common.sh" in line)
-            shell_dir = "zsh"
-        checkout = self.root / "checkout with spaces"
-        (checkout / shell_dir).mkdir(parents=True)
-        (checkout / "shell").mkdir()
-        (checkout / "shell/common.sh").symlink_to(COMMON)
-        rc = checkout / shell_dir / "rc"
-        rc.write_text(loader)
-        (checkout / shell_dir / "link").symlink_to("rc")
-        entry = self.home / "rc"
-        entry.symlink_to(f"../checkout with spaces/{shell_dir}/link")
-        self.env["RC"] = str(entry)
-        result = self.run_shell('source "$RC"; typeset -f cup')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("plugin marketplace update", result.stdout)
-
 
 class BashTests(UpdaterTests, unittest.TestCase):
     shell = BASH

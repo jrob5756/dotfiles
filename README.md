@@ -31,10 +31,9 @@ containing it first.
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 
-`bash/bashrc`, `zsh/zshrc`, and `tmux/tmux.conf` are **pre-migration
-compatibility files**, not the configuration to install on a new machine.
-They remain so existing links do not break before cutover. New changes belong
-in the managed sources above. The old Starship path also remains supported.
+Machines still using the old manual Bash, Zsh, or tmux symlinks must run the
+[migration](#wsl--linux--macos-migration) before pulling past the removal of
+those files. The old Starship path remains supported.
 
 ## Get started on a fresh machine
 
@@ -66,7 +65,7 @@ and checkout path before activation:
 Then follow [WSL / Linux / macOS migration](#wsl--linux--macos-migration):
 install Nix, install the native Mac app/fonts if applicable, preview, and apply.
 The same migration command handles a fresh home and existing OS-provided
-startup files. Do not manually create the legacy Bash, Zsh, or tmux symlinks.
+startup files.
 Keep the checkout in place afterward: Neovim uses it directly.
 
 ### Native Windows
@@ -297,7 +296,8 @@ outputs before checking or publishing:
 nix run .#render
 ```
 
-For Nix changes, format the files, then run the repository gates:
+For Nix changes, format the tree, then run the repository gates (these include
+`statix` and `deadnix` lints):
 
 ```sh
 nix fmt
@@ -309,7 +309,9 @@ change. Commit and push to the shared branch, or merge through a pull request,
 and let CI pass before rolling the change out to other machines.
 
 Dependency updates are deliberate source changes: run `nix flake update` on the
-editing machine, review and commit `flake.lock`, then publish it. Do **not** run
+editing machine, review and commit `flake.lock`, then publish it. A weekly
+workflow also opens a `flake.lock` update PR, and Dependabot bumps the pinned
+GitHub Actions. Do **not** run
 `nix flake update` on every receiving machine; they should consume the same
 committed versions. Likewise, publish intended Neovim plugin updates through
 `nvim/lazy-lock.json`.
@@ -418,7 +420,6 @@ before applying.
 | Public PowerShell profile | Open a new PowerShell session; private overrides still win |
 | Bootstrap scripts or installation paths | Preview the relevant migration/bootstrap; ordinary settings changes do not require migration |
 | Windows Terminal seed | Explicit merge or opt-in copy; pulling alone does nothing |
-| Compatibility Bash/Zsh/tmux files | Only pre-migration machines: open a new shell or reload their legacy tmux config |
 | Documentation or CI configuration only | Read the updated instructions; no runtime activation is needed |
 
 ### Recover from a bad rollout

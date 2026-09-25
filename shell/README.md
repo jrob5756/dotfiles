@@ -1,6 +1,6 @@
 # Shared shell helpers
 
-`common.sh` is sourced by both manual shell configs and embedded by Home Manager.
+`common.sh` is embedded into the Bash and Zsh payloads by Home Manager.
 It contains custom dotfiles helpers, not installer-managed configuration.
 
 ## Interactive features (Home Manager)
@@ -12,6 +12,7 @@ It contains custom dotfiles helpers, not installer-managed configuration.
 | fzf | `Ctrl-R` fuzzy history, `Ctrl-T` insert a file path, `Alt-C` cd into a subdirectory. Opens as a tmux popup inside tmux. Uses `fd`, so hidden files are included and `.git` is skipped. |
 | zoxide | `z <part of path>` jumps to a directory you've visited; `zi` picks one with fzf. |
 | Bash history | 50,000 entries in memory and 100,000 on disk, with timestamps (`history` shows them). Every command is saved as it runs and read by other open shells at their next prompt, so tmux panes share history. |
+| Zsh history | 100,000 entries with timestamps, shared live between open shells. |
 | delta | Git's pager: syntax-highlighted diffs with line numbers for `git diff`, `git show`, `git log -p`, and `git add -p`. Output shorter than a screen prints directly; longer output opens in `less`. Use `n`/`N` to jump between files. |
 
 Home Manager writes delta's settings to `~/.config/git/config`. Your private
@@ -20,6 +21,16 @@ Home Manager writes delta's settings to `~/.config/git/config`. Your private
 `c` and `p` use the same Copilot binary discovery as `cup`, including versioned
 installations without a PATH shim. `a` invokes the separately installed Agency
 CLI. On native Windows, `c` remains the user's Claude shortcut.
+
+## Zsh
+
+Zsh configuration is generated on all Unix hosts, but the migration does not
+change your account's login shell. It provides shared history, completion,
+autosuggestions, syntax highlighting, the common aliases and `cup`. Right
+accepts one word of an autosuggestion; Alt-f accepts the full suggestion.
+Up/Down search history by the current prefix. Home Manager supplies the plugins
+without hardcoded Homebrew paths. The root `~/.zshrc` stays writable for
+installers; put machine-specific overrides in `~/.zshrc.local`.
 
 ## `cup`
 

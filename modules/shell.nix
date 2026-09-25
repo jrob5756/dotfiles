@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  palette,
   ...
 }:
 let
@@ -45,10 +46,11 @@ let
 in
 {
   home.shellAliases = {
-    ls = if pkgs.stdenv.hostPlatform.isDarwin then "ls -G" else "ls --color=auto";
+    # GNU coreutils from Nix precedes the system ls on every host, including macOS.
+    ls = "ls --color=auto";
     ll = "ls -lah";
     la = "ls -A";
-    l = "ls -lah";
+    l = "ls -CF";
     ".." = "cd ..";
     "..." = "cd ../..";
     g = "git";
@@ -96,10 +98,6 @@ in
     ];
     historySize = 50000;
     historyFileSize = 100000;
-    shellAliases = {
-      ll = lib.mkForce "ls -alF";
-      l = lib.mkForce "ls -CF";
-    };
     initExtra = ''
       ${darwinNixPath}
       ${environment}
@@ -119,8 +117,9 @@ in
     syntaxHighlighting.enable = true;
     enableCompletion = true;
     history = {
-      size = 10000;
-      save = 10000;
+      size = 100000;
+      save = 100000;
+      extended = true;
       share = true;
       ignoreDups = true;
       ignoreSpace = true;
@@ -173,21 +172,21 @@ in
         "--layout=reverse"
         "--border"
       ];
-      # Catppuccin Mocha, leaving the background to the terminal.
-      colors = {
-        "bg+" = "#313244";
-        spinner = "#f5e0dc";
-        hl = "#f38ba8";
-        fg = "#cdd6f4";
-        header = "#f38ba8";
-        info = "#cba6f7";
-        pointer = "#f5e0dc";
-        marker = "#b4befe";
-        "fg+" = "#cdd6f4";
-        prompt = "#cba6f7";
-        "hl+" = "#f38ba8";
-        selected-bg = "#45475a";
-        border = "#45475a";
+      # Leave the background to the terminal.
+      colors = with palette.catppuccin; {
+        "bg+" = surface0;
+        spinner = rosewater;
+        hl = red;
+        fg = text;
+        header = red;
+        info = mauve;
+        pointer = rosewater;
+        marker = lavender;
+        "fg+" = text;
+        prompt = mauve;
+        "hl+" = red;
+        selected-bg = surface1;
+        border = surface1;
       };
       tmux = {
         enableShellIntegration = true;

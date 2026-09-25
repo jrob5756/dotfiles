@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   imports = [
     ../modules/base.nix
     ../modules/wsl.nix

@@ -1,0 +1,29 @@
+name: Update flake.lock
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - uses: DeterminateSystems/update-flake-lock@da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3 # v29
+        with:
+          commit-msg: "chore(nix): update flake.lock"
+          pr-title: "chore(nix): update flake.lock"
+          # PRs opened with the default GITHUB_TOKEN do not trigger CI. Add a
+          # FLAKE_LOCK_TOKEN secret (fine-grained PAT: contents + pull requests)
+          # to have the Dotfiles workflow run on these PRs automatically.
+          token: ${{ secrets.FLAKE_LOCK_TOKEN || github.token }}

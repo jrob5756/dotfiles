@@ -3,9 +3,6 @@
 New installations use `modules/shell.nix` through the
 [migration command](../README.md#wsl--linux--macos-migration).
 
-`bashrc` is a compatibility file for existing pre-migration symlinks. Do not
-replace a managed `~/.bashrc` loader with a symlink to it.
-
 `inputrc` remains the source for the history-prefix Up/Down bindings and is
 installed as `~/.inputrc` by Home Manager. Keep it LF-terminated.
 
