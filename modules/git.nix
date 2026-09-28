@@ -7,11 +7,24 @@ _: {
 
     settings = {
       init.defaultBranch = "main";
-      push.autoSetupRemote = true;
+      push = {
+        autoSetupRemote = true;
+        followTags = true;
+      };
       fetch.prune = true;
       rerere.enabled = true;
-      rebase.autoStash = true;
+      rebase = {
+        autoStash = true;
+        autoSquash = true;
+        # Moves branches stacked on the one being rebased along with it.
+        updateRefs = true;
+      };
       branch.sort = "-committerdate";
+      tag.sort = "version:refname";
+      column.ui = "auto";
+      # Shows the diff below the message while writing it.
+      commit.verbose = true;
+      help.autocorrect = "prompt";
       diff = {
         algorithm = "histogram";
         colorMoved = "default";

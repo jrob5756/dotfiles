@@ -1,2 +1,11 @@
 "\e[A": history-search-backward
 "\e[B": history-search-forward
+
+# Tab completion: case-insensitive (treating - and _ alike), list every match on
+# the first Tab, and colour matches like ls does.
+set completion-ignore-case on
+set completion-map-case on
+set show-all-if-ambiguous on
+set colored-stats on
+set colored-completion-prefix on
+set mark-symlinked-directories on

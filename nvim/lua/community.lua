@@ -2,6 +2,9 @@
 return {
   "AstroNvim/astrocommunity",
   { import = "astrocommunity.pack.lua" },
+  { import = "astrocommunity.pack.nix" },
+  { import = "astrocommunity.pack.yaml" },
+  { import = "astrocommunity.pack.markdown" },
   -- Import only the chosen Python servers; recursive pack imports also load pyrefly and ty.
   { import = "astrocommunity.pack.python.base" },
   { import = "astrocommunity.pack.python.basedpyright" },

@@ -100,6 +100,13 @@ check_sdk = spec("dotnet", "AstroNvim/astrocore").opts.autocmds.dotnet_sdk_check
 check_sdk.callback()
 assert(#notifications == 0)
 
+reset()
+opts = { servers = { "custom_server", "nixd", "yamlls" } }
+spec("mason", "AstroNvim/astrolsp").opts(nil, opts)
+assert(vim.tbl_contains(opts.servers, "custom_server"), "Unknown servers must be preserved")
+assert(not vim.tbl_contains(opts.servers, "nixd"), "Pack server without an executable must be dropped")
+assert(not vim.tbl_contains(opts.servers, "yamlls"), "Pack server without an executable must be dropped")
+
 reset { sdk = true, sdk_error = true, paths = { dotnet = "/mock/dotnet" } }
 assert(not require("toolchain").have_dotnet_sdk(), "A failed SDK probe must not enable C#")
 
@@ -116,6 +123,9 @@ for _, command in ipairs {
   "csharpier",
   "netcoredbg",
   "tree-sitter",
+  "nixd",
+  "yaml-language-server",
+  "marksman",
 } do
   paths[command] = "/mock/" .. command
 end
@@ -131,7 +141,7 @@ spec("mason", "jay-babu/mason-null-ls.nvim").opts(nil, opts)
 assert(type(opts.handlers.selene) == "function")
 opts = { servers = { "custom_server" } }
 spec("mason", "AstroNvim/astrolsp").opts(nil, opts)
-for _, server in ipairs { "custom_server", "basedpyright", "ruff", "lua_ls", "csharp_ls" } do
+for _, server in ipairs { "custom_server", "basedpyright", "ruff", "lua_ls", "csharp_ls", "nixd", "yamlls", "marksman" } do
   assert(vim.tbl_contains(opts.servers, server), "PATH LSP not enabled: " .. server)
 end
 spec("dotnet", "mfussenegger/nvim-dap").config()

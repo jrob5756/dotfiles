@@ -21,5 +21,11 @@ with pkgs;
   dotnet-sdk
   csharp-ls
   csharpier
+  nixd
+  nixfmt
+  statix
+  deadnix
+  yaml-language-server
+  marksman
 ]
 ++ lib.optionals stdenv.hostPlatform.isLinux [ netcoredbg ]

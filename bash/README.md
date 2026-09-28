@@ -3,8 +3,10 @@
 New installations use `modules/shell.nix` through the
 [migration command](../README.md#wsl--linux--macos-migration).
 
-`inputrc` remains the source for the history-prefix Up/Down bindings and is
-installed as `~/.inputrc` by Home Manager. Keep it LF-terminated.
+`inputrc` holds the history-prefix Up/Down bindings and completion settings
+(case-insensitive, `-`/`_` treated alike, all matches listed on the first Tab,
+coloured like `ls`). Home Manager installs it as `~/.inputrc`. Keep it
+LF-terminated.
 
 Managed Bash retains completion, the shared aliases and updater, NVM
 initialization, user-local tool paths, and WSL directory reporting.

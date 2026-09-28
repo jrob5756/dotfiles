@@ -7,6 +7,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Prebuilt weekly nix-index database, so `,` and command-not-found work
+    # without a local indexing run.
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -14,6 +20,7 @@
       self,
       nixpkgs,
       home-manager,
+      nix-index-database,
       ...
     }:
     let
@@ -72,7 +79,10 @@
             inherit palette starshipSettings;
             hostName = name;
           };
-          modules = [ (./hosts + "/${name}.nix") ];
+          modules = [
+            nix-index-database.homeModules.nix-index
+            (./hosts + "/${name}.nix")
+          ];
         }
       ) hosts;
 
@@ -138,7 +148,8 @@
                 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
                 for tool in git rg fd lazygit curl tar node python3 debugpy-adapter \
                   basedpyright-langserver ruff lua-language-server stylua selene \
-                  tree-sitter cc make dotnet csharp-ls csharpier; do
+                  tree-sitter cc make dotnet csharp-ls csharpier nixd nixfmt statix deadnix \
+                  yaml-language-server marksman; do
                   command -v "$tool" >/dev/null
                 done
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "command -v netcoredbg >/dev/null"}

@@ -8,6 +8,9 @@
 let
   c = palette.catppuccin;
 
+  # Backs the prefix ` popup. Hidden from both switchers.
+  scratchSession = "scratch";
+
   theme = ''
     # Preserve the outer terminal's background and transparency; dim only inactive panes' default text.
     set -g window-style 'fg=${c.overlay1},bg=terminal'
@@ -41,27 +44,61 @@ let
     name = "tmux-session-switcher";
     runtimeInputs = [
       config.programs.tmux.package
+      config.programs.zoxide.package
       pkgs.fzf
       pkgs.coreutils
       pkgs.gnused
     ];
     text = ''
-      # Most recently used first.
+      # Sessions, most recently used first, then zoxide's directories that no
+      # session is rooted in. Field 1 is the kind, field 2 the target.
       tab=$'\t'
-      sessions=$(tmux list-sessions -F "#{session_activity}''${tab}#{session_name}''${tab}#{session_windows} windows#{?session_attached, (attached),}" |
-        sort -rn | cut -f2-)
+      declare -A rooted=()
+      entries=()
+      while IFS=$tab read -r _ name path info; do
+        rooted[$path]=1
+        entries+=("session''${tab}$name''${tab} $name  $info")
+      done < <(tmux list-sessions -f '#{!=:#{session_name},${scratchSession}}' \
+        -F "#{session_activity}''${tab}#{session_name}''${tab}#{session_path}''${tab}#{session_windows} windows#{?session_attached, (attached),}" |
+        sort -rn)
+      while IFS= read -r dir; do
+        [ -n "''${rooted[$dir]:-}" ] || entries+=("dir''${tab}$dir''${tab} ''${dir/#"$HOME"/\~}")
+      done < <(zoxide query --list 2>/dev/null || true)
+
       status=0
-      out=$(printf '%s\n' "$sessions" | fzf --reverse --no-multi --print-query \
-        --delimiter="$tab" --prompt='session> ' \
-        --header='enter: switch  |  new name + enter: create') || status=$?
+      # Enter picks the highlighted entry; Ctrl-O creates a session named by the
+      # query even when it fuzzy-matches something.
+      out=$(printf '%s\n' "''${entries[@]}" | fzf --reverse --no-multi --print-query \
+        --expect=ctrl-o --delimiter="$tab" --with-nth=3 --prompt='session> ' \
+        --header='enter: switch or open directory  |  ctrl-o: new session named as typed') || status=$?
       # 130 is Esc/Ctrl-C; 1 means no match, which still prints the query.
       if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then exit 0; fi
       query=$(sed -n 1p <<<"$out")
-      target=$(sed -n 2p <<<"$out" | cut -f1)
-      target=''${target:-$query}
+      key=$(sed -n 2p <<<"$out")
+      pick=$(sed -n 3p <<<"$out")
+      kind=$(cut -f1 <<<"$pick")
+      target=$(cut -f2 <<<"$pick")
+      if [ -z "$pick" ] || [ "$key" = ctrl-o ]; then
+        kind=session
+        target=$query
+      fi
       [ -n "$target" ] || exit 0
-      tmux has-session -t "=$target" 2>/dev/null || tmux new-session -d -s "$target" -c "$HOME"
-      tmux switch-client -t "=$target"
+
+      if [ "$kind" = dir ]; then
+        dir=$target
+        # tmux rewrites . and : in session names; do it up front so lookups match.
+        name=$(basename "$dir" | tr '.:' '__')
+        # Listed directories have no session rooted in them, so an existing
+        # session with this name belongs to another directory.
+        if tmux has-session -t "=$name" 2>/dev/null; then
+          name="$(basename "$(dirname "$dir")" | tr '.:' '__')-$name"
+        fi
+      else
+        name=$target
+        dir=$HOME
+      fi
+      tmux has-session -t "=$name" 2>/dev/null || tmux new-session -d -s "$name" -c "$dir"
+      tmux switch-client -t "=$name"
     '';
   };
 
@@ -76,7 +113,7 @@ let
       # Every window in every session, most recently active first. The hidden
       # first field is the switch target; the preview shows the window's contents.
       tab=$'\t'
-      windows=$(tmux list-windows -a -F "#{window_activity}''${tab}#{session_name}:#{window_index}''${tab}#{session_name}''${tab}#{window_index}: #{window_name}''${tab}#{pane_current_path}" |
+      windows=$(tmux list-windows -a -f '#{!=:#{session_name},${scratchSession}}' -F "#{window_activity}''${tab}#{session_name}:#{window_index}''${tab}#{session_name}''${tab}#{window_index}: #{window_name}''${tab}#{pane_current_path}" |
         sort -rn | cut -f2-)
       pick=$(printf '%s\n' "$windows" | fzf --reverse --no-multi \
         --delimiter="$tab" --with-nth=2.. --prompt='window> ' \
@@ -104,6 +141,15 @@ in
     plugins = with pkgs.tmuxPlugins; [
       vim-tmux-navigator
       {
+        # prefix F: hint-label SHAs, paths, URLs, IPs and similar on screen;
+        # typing a hint copies it. Copying goes through tmux, so set-clipboard
+        # forwards it as OSC 52 on every host, including WSL and over SSH.
+        plugin = fingers;
+        extraConfig = ''
+          set -g @fingers-main-action 'tmux load-buffer -w -'
+        '';
+      }
+      {
         plugin = resurrect;
         extraConfig = ''
           if-shell 'test -d "${config.home.homeDirectory}/.tmux/resurrect" && ! test -d "${config.xdg.dataHome}/tmux/resurrect"' {
@@ -130,6 +176,15 @@ in
       bind s display-popup -E -w 60% -h 50% -T ' sessions ' ${lib.getExe sessionSwitcher}
       # prefix f: fuzzy window switcher across all sessions, with a preview.
       bind f display-popup -E -w 85% -h 70% -T ' windows ' ${lib.getExe windowSwitcher}
+      # prefix g: lazygit for the current pane's directory.
+      bind g display-popup -E -w 90% -h 90% -d '#{pane_current_path}' -T ' lazygit ' ${lib.getExe pkgs.lazygit}
+      # prefix `: toggle a persistent scratch shell. The popup attaches a second
+      # client to a hidden session, so its shell survives closing the popup.
+      bind '`' if-shell -F '#{==:#{session_name},${scratchSession}}' {
+        detach-client
+      } {
+        display-popup -E -w 80% -h 75% -d '#{pane_current_path}' -T ' scratch ' 'tmux new-session -A -s ${scratchSession}'
+      }
     '';
   };
 

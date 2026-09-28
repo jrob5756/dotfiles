@@ -8,8 +8,11 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **Mouse support on** — click to select a pane, drag borders to resize, scroll to scroll a pane's history.
 - **`prefix |`** / **`prefix \`** / **`prefix _`** / **`prefix -`** — split the current pane right / left / down / up, opening in the current pane's directory (the `|` vsplit matches the mapping in the nvim config). Unshifted keys put the new pane above or to the left; shifted keys put it below or to the right.
 - **`prefix c`** — new windows also open in the current pane's directory.
-- **`prefix s`** — fuzzy session switcher in a popup (most recently used first). Type the name of a session that doesn't exist and press Enter to create it. The built-in tree view is still on `prefix w`.
+- **`prefix s`** — fuzzy session switcher in a popup: sessions (most recently used first), then zoxide's directories. Picking a directory opens a session named after it, rooted there, or switches to it if it already exists. Enter on a name that matches nothing creates a session in `~`; **Ctrl-O** creates one named exactly as typed even when it fuzzy-matches an entry. The built-in tree view is still on `prefix w`.
 - **`prefix f`** — fuzzy window switcher across all sessions (most recently active first), with a live preview of the highlighted window. Replaces tmux's built-in find-window.
+- **`prefix g`** — lazygit in a popup, for the current pane's directory.
+- **`` prefix ` ``** — toggle a scratch shell in a popup. It's a hidden `scratch` session, so the shell and its history survive closing the popup. Neither switcher lists it.
+- **`prefix F`** — tmux-fingers: labels SHAs, paths, URLs, IPs, UUIDs and similar on screen with short hints; typing a hint copies the match. `prefix J` jumps the copy-mode cursor to a match instead. Copies go through tmux (`load-buffer -w`), so they reach the system clipboard over OSC 52 on every host.
 - **Closing a session doesn't exit tmux**: `detach-on-destroy off` moves you to another session when the last window of the current one closes.
 - **Catppuccin status bar** (colours from `modules/palette.nix`) on the terminal background: session badge on the left (turns red while the prefix is pending), windows in the middle, `ZOOM` when a pane is zoomed, then time and host.
 - **50,000 lines of scrollback** per pane.
@@ -32,7 +35,8 @@ See the root [`README.md`](../README.md) for the full bootstrap.
 Manager module models directly — prefix, mouse, base index, key mode, escape
 time, history limit, and terminal type. It also renders the colour theme from
 `modules/palette.nix` and builds the `prefix s` session and `prefix f` window
-switcher scripts, since those bindings need Nix store paths. The remaining
+switcher scripts and the lazygit and scratch popups, since those bindings need
+Nix store paths. The remaining
 bindings, terminal features, and copy-mode setup stay in `settings.conf` in
 tmux's own syntax.
 

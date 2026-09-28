@@ -41,8 +41,7 @@ those files. The old Starship path remains supported.
 
 Install Git and curl before cloning. On WSL or Ubuntu, also generate the
 `en_US.UTF-8` locale that the managed shell sets (`sudo locale-gen en_US.UTF-8`);
-otherwise system programs such as `/usr/bin/perl`, which fzf's `Ctrl-R` uses,
-print locale warnings. On macOS, also install Homebrew and its
+otherwise system programs such as `/usr/bin/perl` print locale warnings. On macOS, also install Homebrew and its
 Command Line Tools prerequisites. On Windows, create/start a WSL2 distro first
 if you want the Linux environment; run these steps **inside WSL**, not in
 native PowerShell.

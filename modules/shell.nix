@@ -43,6 +43,29 @@ let
     _dotfiles_path_prepend "$HOME/.nix-profile/bin"
     unset -f _dotfiles_path_prepend
   '';
+  # Bash does not complete aliases. On first Tab, load the target command's
+  # completion through bash-completion, copy its spec onto the alias, and
+  # return 124 so readline retries with it. Zsh completes aliases natively.
+  bashAliasCompletion = ''
+    _dotfiles_complete_alias() {
+      local target spec
+      case $1 in
+        g) target=git ;;
+        k) target=kubectl ;;
+        *) return 1 ;;
+      esac
+      if declare -F _comp_load >/dev/null; then
+        _comp_load "$target"
+      elif declare -F __load_completion >/dev/null; then
+        __load_completion "$target"
+      fi
+      spec=$(complete -p "$target" 2>/dev/null) || return 1
+      eval "''${spec% *} $1"
+      return 124
+    }
+    complete -F _dotfiles_complete_alias g k
+  '';
+  bat = lib.getExe config.programs.bat.package;
 in
 {
   home.shellAliases = {
@@ -85,6 +108,9 @@ in
     DIRENV_LOG_FORMAT = "";
     DOTFILES_NIX = "1";
     NETRC = "${config.home.homeDirectory}/.netrc";
+    MANPAGER = "sh -c 'col -bx | ${bat} --language=man --plain'";
+    # Keep groff's formatting escapes out of the text bat highlights.
+    MANROFFOPT = "-c";
   };
 
   programs.bash = {
@@ -106,6 +132,7 @@ in
       # as it runs and pick up commands saved by the others.
       PROMPT_COMMAND="''${PROMPT_COMMAND:+$PROMPT_COMMAND; }history -a; history -n"
       if [ -s "$NVM_DIR/bash_completion" ]; then . "$NVM_DIR/bash_completion"; fi
+      ${bashAliasCompletion}
       ${common}
       if [ -r "$HOME/.bash_aliases" ]; then . "$HOME/.bash_aliases"; fi
     '';
@@ -155,7 +182,13 @@ in
     nix-direnv.enable = true;
   };
 
-  # Ctrl-R history, Ctrl-T files, Alt-C directories; tmux popups when inside tmux.
+  programs.bat = {
+    enable = true;
+    config.theme = "Catppuccin Mocha";
+  };
+
+  # Ctrl-T files and Alt-C directories, with previews; tmux popups when inside
+  # tmux.
   programs.fzf =
     let
       fd = lib.getExe pkgs.fd;
@@ -165,8 +198,16 @@ in
       enableBashIntegration = true;
       enableZshIntegration = true;
       defaultCommand = "${fd} --type f --hidden --follow --exclude .git";
-      fileWidget.command = "${fd} --type f --hidden --follow --exclude .git";
-      changeDirWidget.command = "${fd} --type d --hidden --follow --exclude .git";
+      fileWidget = {
+        command = "${fd} --type f --hidden --follow --exclude .git";
+        options = [ "--preview '${bat} --color=always --style=numbers --line-range=:300 {}'" ];
+      };
+      changeDirWidget = {
+        command = "${fd} --type d --hidden --follow --exclude .git";
+        options = [ "--preview '${lib.getExe pkgs.tree} -C -L 2 {} | head -200'" ];
+      };
+      # Atuin owns Ctrl-R.
+      historyWidget.command = "";
       defaultOptions = [
         "--height=40%"
         "--layout=reverse"
@@ -193,6 +234,35 @@ in
         shellIntegrationOptions = [ "-p 80%,60%" ];
       };
     };
+
+  # Ctrl-R searches a SQLite history that records cwd, exit status and duration.
+  # Up keeps the shells' prefix search. Sync stays off until `atuin login`.
+  programs.atuin = {
+    enable = true;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
+    # `?` on an empty line would otherwise open Atuin's hosted AI assistant.
+    flags = [
+      "--disable-up-arrow"
+      "--disable-ai"
+    ];
+    settings = {
+      style = "compact";
+      inline_height = 20;
+      # Enter puts the command on the prompt for editing, as fzf's Ctrl-R did.
+      enter_accept = false;
+      update_check = false;
+    };
+  };
+
+  # `, <cmd>` runs any nixpkgs program without installing it, and unknown
+  # commands suggest the package that provides them.
+  programs.nix-index = {
+    enable = true;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
+  };
+  programs.nix-index-database.comma.enable = true;
 
   # `z <part-of-path>` jumps to a frequently used directory; `zi` picks one with fzf.
   programs.zoxide = {

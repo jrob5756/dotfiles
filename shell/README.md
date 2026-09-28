@@ -9,11 +9,20 @@ It contains custom dotfiles helpers, not installer-managed configuration.
 
 | Feature | Use |
 |---|---|
-| fzf | `Ctrl-R` fuzzy history, `Ctrl-T` insert a file path, `Alt-C` cd into a subdirectory. Opens as a tmux popup inside tmux. Uses `fd`, so hidden files are included and `.git` is skipped. |
-| zoxide | `z <part of path>` jumps to a directory you've visited; `zi` picks one with fzf. |
+| atuin | `Ctrl-R` searches a SQLite history that records each command's directory, exit status and duration. Enter puts the pick on the prompt for editing rather than running it. Up/Down keep the shell's own prefix search. Nothing syncs unless you run `atuin login`. Import older history with `atuin import auto`. |
+| fzf | `Ctrl-T` inserts a file path with a `bat` preview; `Alt-C` cds into a subdirectory with a tree preview. Opens as a tmux popup inside tmux. Uses `fd`, so hidden files are included and `.git` is skipped. |
+| zoxide | `z <part of path>` jumps to a directory you've visited; `zi` picks one with fzf. Its directories also appear in tmux's `prefix s` switcher. |
+| nix-index + comma | `, <command>` runs any nixpkgs program once without installing it. Typing a command that isn't installed suggests the package that provides it. The database is prebuilt and pinned in `flake.lock`. |
+| bat | Syntax-highlighted `cat` (Catppuccin Mocha); also the `man` pager. |
+| Alias completion | Tab completes `g` like `git` and `k` like `kubectl` in Bash too (Zsh does this natively). |
+| Browser (WSL) | `BROWSER` and an `xdg-open` shim point at `wsl-open`, which hands URLs and files to the Windows default app, so `gh ... --web` and `gh auth login` work. |
 | Bash history | 50,000 entries in memory and 100,000 on disk, with timestamps (`history` shows them). Every command is saved as it runs and read by other open shells at their next prompt, so tmux panes share history. |
 | Zsh history | 100,000 entries with timestamps, shared live between open shells. |
 | delta | Git's pager: syntax-highlighted diffs with line numbers for `git diff`, `git show`, `git log -p`, and `git add -p`. Output shorter than a screen prints directly; longer output opens in `less`. Use `n`/`N` to jump between files. |
+
+Git also enables `rebase.updateRefs` (rebasing a branch moves branches stacked
+on it), `rebase.autoSquash`, `commit.verbose`, `push.followTags`,
+`help.autocorrect=prompt`, version-sorted tags and columnar branch lists.
 
 Home Manager writes delta's settings to `~/.config/git/config`. Your private
 `~/.gitconfig` is read after it and wins, so it must not set `core.pager`.

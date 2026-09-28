@@ -88,6 +88,10 @@ class TmuxTests(unittest.TestCase):
                     self.assertIn("display-popup", bindings[key])
                     switcher = bindings[key][-1]
                     self.assertTrue(os.access(switcher, os.X_OK), switcher)
+                self.assertIn("display-popup", bindings["g"])
+                self.assertTrue(bindings["g"][-1].endswith("/bin/lazygit"), bindings["g"])
+                self.assertIn("if-shell", bindings["`"])
+                self.assertRegex(" ".join(bindings["`"]), r"new-session -A -s scratch")
             finally:
                 subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

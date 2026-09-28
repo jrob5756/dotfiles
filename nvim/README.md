@@ -9,7 +9,7 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 - `<C-h/j/k/l>` navigates Neovim splits and tmux panes using `vim-tmux-navigator`.
 - `yA` copies the whole file without moving the cursor. `unnamedplus` also sends normal yanks, deletes, and changes to the system clipboard.
 - `n` / `N` center search results and open folds containing matches.
-- Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available.
+- Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available. Nix uses nixd, nixfmt, statix, and deadnix; YAML uses yaml-language-server with SchemaStore; Markdown uses marksman.
 - Conform owns formatting (`<Leader>lf` or `:Format`) and format-on-save. `<Leader>uf` / `<Leader>uF` toggle buffer/global autoformatting.
 - Copilot completion is integrated with blink.cmp. Run `:Copilot auth` to sign in.
 - On native Windows, `<Leader>tc`, `<Leader>t5`, and `<Leader>t7` open interactive cmd, Windows PowerShell, and PowerShell 7 terminals with profiles loaded. Background shell calls use PowerShell with `-NoProfile` to avoid blocking on interactive startup.
@@ -35,6 +35,9 @@ In these sessions, Mason does not automatically install or update tools, add its
 | `tree-sitter`, C compiler (`cc`), `make`, `curl`, `tar` | Treesitter parser generation, compilation, and downloads |
 | `dotnet` with an SDK, `csharp-ls`, `csharpier` | C# editing and formatting |
 | `netcoredbg` (Linux only) | C# debugging, subject to package/platform availability |
+| `nixd`, `nixfmt`, `statix`, `deadnix` | Nix editing, formatting, and linting |
+| `yaml-language-server` | YAML editing with SchemaStore schemas (Kubernetes, GitHub Actions, and more) |
+| `marksman` | Markdown links, headings, and references |
 
 Language servers are explicitly enabled only when their executables are found on PATH. Python interpreter overrides from project configuration are preserved; active `VIRTUAL_ENV` and `CONDA_PREFIX` interpreters take precedence over the pinned toolchain's Python. If no interpreter is found, basedpyright is allowed to discover one instead of receiving an empty path.
 
@@ -73,7 +76,7 @@ For a manual Linux/macOS installation, link the checkout's `nvim` directory to `
 
 ## Plugins, parsers, and clipboard
 
-Lazy.nvim installs plugins on first launch using `lazy-lock.json`. This is separate from external-tool ownership. AstroCore/nvim-treesitter installs parsers, including Lua, Vim, C#, Python, and TOML; **Mason only supplies the tree-sitter CLI on manual installations, not parsers**. Parser installation requires a working compiler and network access.
+Lazy.nvim installs plugins on first launch using `lazy-lock.json`. This is separate from external-tool ownership. AstroCore/nvim-treesitter installs parsers, including Lua, Vim, C#, Python, TOML, Nix, YAML, and Markdown; **Mason only supplies the tree-sitter CLI on manual installations, not parsers**. Parser installation requires a working compiler and network access.
 
 Clipboard provider selection remains Neovim's native autodetection:
 

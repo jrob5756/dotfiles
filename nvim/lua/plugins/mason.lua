@@ -10,6 +10,18 @@ local commands = {
   ["csharpier"] = "csharpier",
   ["netcoredbg"] = "netcoredbg",
   ["tree-sitter-cli"] = "tree-sitter",
+  ["yaml-language-server"] = "yaml-language-server",
+  ["marksman"] = "marksman",
+}
+
+local server_commands = {
+  lua_ls = "lua-language-server",
+  basedpyright = "basedpyright-langserver",
+  ruff = "ruff",
+  csharp_ls = "csharp-ls",
+  nixd = "nixd",
+  yamlls = "yaml-language-server",
+  marksman = "marksman",
 }
 
 ---@type LazySpec
@@ -102,17 +114,17 @@ return {
     "AstroNvim/astrolsp",
     opts = function(_, opts)
       local servers = {}
-      for server, command in pairs {
-        lua_ls = "lua-language-server",
-        basedpyright = "basedpyright-langserver",
-        ruff = "ruff",
-        csharp_ls = "csharp-ls",
-      } do
+      for server, command in pairs(server_commands) do
         if vim.fn.executable(command) == 1 and (server ~= "csharp_ls" or toolchain.have_dotnet_sdk()) then
           table.insert(servers, server)
         end
       end
-      opts.servers = require("astrocore").list_insert_unique(opts.servers or {}, servers)
+      -- Language packs enable their servers unconditionally; drop known ones whose executable is missing.
+      opts.servers = vim.tbl_filter(
+        function(server) return not server_commands[server] or vim.fn.executable(server_commands[server]) == 1 end,
+        opts.servers or {}
+      )
+      opts.servers = require("astrocore").list_insert_unique(opts.servers, servers)
       if not toolchain.have_dotnet_sdk() then
         opts.handlers = opts.handlers or {}
         opts.handlers.csharp_ls = false
