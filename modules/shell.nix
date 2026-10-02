@@ -66,6 +66,12 @@ let
     complete -F _dotfiles_complete_alias g k
   '';
   bat = lib.getExe config.programs.bat.package;
+  yaziFlavors = pkgs.fetchFromGitHub {
+    owner = "yazi-rs";
+    repo = "flavors";
+    rev = "1183892c904f7f0efdf4473e856ed308b7bea98d";
+    hash = "sha256-E1OUF1+mT0V3crVxkewG2Y7hRu8fO+0oRl6NlINmw+o=";
+  };
 in
 {
   home.shellAliases = {
@@ -269,6 +275,21 @@ in
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
+  };
+
+  # `y` opens the yazi file manager and leaves the shell in its last directory.
+  # Image previews in tmux rely on allow-passthrough and update-environment in
+  # tmux/settings.conf.
+  programs.yazi = {
+    enable = true;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
+    shellWrapperName = "y";
+    flavors.catppuccin-mocha = "${yaziFlavors}/catppuccin-mocha.yazi";
+    theme.flavor = {
+      dark = "catppuccin-mocha";
+      light = "catppuccin-mocha";
+    };
   };
 
   # Installers may edit the writable loaders; Nix owns only their sourced payloads.

@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   palette,
@@ -42,10 +43,21 @@
       # Ghostty always confirms while tmux runs, but tmux keeps the sessions.
       confirm-close-surface = false;
 
+      # Every window attaches to (or creates) the `main` tmux session. The
+      # absolute path matters because GUI launches lack the Nix profile on PATH.
+      command = "${lib.getExe config.programs.tmux.package} new-session -A -s main";
+
+      mouse-hide-while-typing = true;
+
       # Ghostty measures scrollback in bytes, not lines.
       scrollback-limit = 10000000;
     }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+      # Native macOS glass replaces the generic blur.
+      background-blur = "macos-glass-regular";
+      # Fully opaque on demand, e.g. while screen sharing.
+      keybind = [ "cmd+shift+o=toggle_background_opacity" ];
+
       # A transparent titlebar with no buttons or title is invisible but still
       # draggable, unlike the "hidden" style.
       macos-titlebar-style = "transparent";

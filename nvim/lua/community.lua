@@ -13,4 +13,8 @@ return {
   { import = "astrocommunity.editing-support.conform-nvim" },
   { import = "astrocommunity.editing-support.auto-save-nvim" },
   { import = "astrocommunity.search.grug-far-nvim" },
+  { import = "astrocommunity.colorscheme.catppuccin" },
+  { import = "astrocommunity.motion.flash-nvim" },
+  { import = "astrocommunity.git.diffview-nvim" },
+  { import = "astrocommunity.file-explorer.oil-nvim" },
 }

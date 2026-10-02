@@ -19,6 +19,7 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **Obvious active pane**: the active pane gets a heavy, bold blue border with arrow indicators. Inactive borders are muted, and default text in inactive panes is dimmed. Backgrounds stay `terminal`, so transparency is preserved.
 - **`prefix r`** — reload config without restarting tmux.
 - **Sessions survive reboots** — `tmux-resurrect` + `tmux-continuum` auto-save every 15 minutes and auto-restore when the tmux server next starts. See [Session persistence](#session-persistence) below.
+- **Ghostty opens straight into tmux**: each Ghostty window runs `tmux new-session -A -s main`, attaching to the `main` session or creating it. Launching Ghostty therefore starts the server and triggers auto-restore.
 - Copy mode uses vi-style keys (`v` to start selection, `y` to yank) since that matches Neovim muscle memory better than tmux's Emacs-style defaults.
 
 ## Setup
@@ -71,7 +72,7 @@ snapshots are not moved or deleted; when both directories exist, XDG wins.
 Caveats worth knowing:
 
 - Only the shell processes are recreated by default; arbitrary long-running programs inside panes are not resumed unless added to `@resurrect-processes`. Neovim is the exception here — `@resurrect-strategy-nvim session` restores it when a `Session.vim` exists in the pane's working directory.
-- Auto-restore needs *something* to start the tmux server. On WSL the server dies with the distro, so it restores on your next manual `tmux`, not at boot.
+- Auto-restore needs *something* to start the tmux server. Ghostty does this on launch; on WSL the server dies with the distro, so it restores on your next manual `tmux`, not at boot.
 - Shell history, environment variables, and in-flight command state are not part of the snapshot — only the layout and the scrollback text.
 
 ## Notes

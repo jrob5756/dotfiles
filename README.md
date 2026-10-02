@@ -11,6 +11,7 @@ PowerShell bootstrap. There are no per-platform Git branches.
 | Setting up a new computer or WSL distro | [Get started on a fresh machine](#get-started-on-a-fresh-machine) |
 | Adopting this setup on a machine with existing configs | [Onboard an existing machine](#onboard-an-existing-machine) |
 | Applying changes from this repository to configured machines | [Roll out repository updates](#roll-out-repository-updates) |
+| Remembering keys and tools | [Cheat sheet](#cheat-sheet) |
 
 Before setting up another machine, commit and push the configuration you want
 it to receive. A clone or pull cannot include another checkout's uncommitted
@@ -34,6 +35,39 @@ containing it first.
 Machines still using the old manual Bash, Zsh, or tmux symlinks must run the
 [migration](#wsl--linux--macos-migration) before pulling past the removal of
 those files. The old Starship path remains supported.
+
+## Cheat sheet
+
+Each tool can list its own keys, so start there when something is forgotten:
+
+| Tool | Show available keys |
+|---|---|
+| Neovim | `Space`, then wait for the which-key menu |
+| Oil (Neovim) | `g?` |
+| yazi | `F1` |
+| Ghostty | `Cmd+Shift+P` command palette |
+| tmux | `prefix ?` (prefix is `Ctrl-a`) |
+
+**Ghostty (macOS).** Windows open straight into the `main` tmux session. Drag the
+window by the invisible strip along its top edge. With the window buttons
+hidden, use `Cmd+W` to close, `Cmd+M` to minimize, and `Fn+Ctrl+F` to fill the
+screen. `Cmd+Shift+O` toggles transparency, `Cmd+Shift+,` reloads the config,
+and `Cmd+0` resets the font size.
+
+**Shell.**
+
+| Keys | Action |
+|---|---|
+| `y` | yazi file manager; quitting leaves the shell in the last directory |
+| `z <part>` / `zi` | Jump to a frequent directory / pick one with fzf |
+| `Ctrl-R` | Search shell history with Atuin |
+| `Ctrl-T` / `Alt-C` | Fuzzy-insert a file path / cd into a directory |
+| `, <cmd>` | Run any nixpkgs program without installing it |
+
+**tmux** keys (`prefix s` sessions, `prefix f` windows, `prefix g` lazygit, and
+more) are in [`tmux/README.md`](tmux/README.md#highlights). **Neovim** keys
+(flash on `s`, Diffview on `Space g v`, Oil on `-`, and more) are in
+[`nvim/README.md`](nvim/README.md#behavior-and-mappings).
 
 ## Get started on a fresh machine
 
