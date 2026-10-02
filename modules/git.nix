@@ -12,6 +12,8 @@ _: {
         followTags = true;
       };
       fetch.prune = true;
+      # Git refuses to pull diverged branches until a strategy is chosen.
+      pull.rebase = true;
       rerere.enabled = true;
       rebase = {
         autoStash = true;
@@ -37,6 +39,8 @@ _: {
       ".DS_Store"
       ".direnv/"
       "*.swp"
+      "**/.claude/settings.local.json"
+      ".envrc"
     ];
   };
 
