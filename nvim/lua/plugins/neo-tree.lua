@@ -36,6 +36,11 @@ return {
         -- close_all_nodes, which collapses the entire tree)
         ["Z"] = "expand_all_subnodes",
         ["z"] = "close_all_subnodes",
+        -- Free s/S for flash.nvim; open in splits with the tmux split keys instead.
+        ["s"] = "none",
+        ["S"] = "none",
+        ["|"] = "open_vsplit",
+        ["_"] = "open_split",
       },
     },
     -- the Git Status source doesn't follow directory changes (`.` or `:cd`) by default,

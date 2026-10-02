@@ -10,7 +10,7 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 - `yA` copies the whole file without moving the cursor. `unnamedplus` also sends normal yanks, deletes, and changes to the system clipboard.
 - `n` / `N` center search results and open folds containing matches.
 - The colorscheme is Catppuccin Mocha, matching Ghostty, tmux, bat, delta, and fzf.
-- `s` jumps anywhere on screen with flash.nvim by typing a few characters and a label; `S` selects a Treesitter node. In operator-pending mode, `r` acts on a remote location (for example `yr`).
+- `s` jumps anywhere on screen with flash.nvim by typing a few characters and a label; `S` selects a Treesitter node. In operator-pending mode, `r` acts on a remote location (for example `yr`). `/` and `?` searches show the same labels; `<C-s>` while searching toggles them. Flash also works in Neo-tree, where `|` / `_` open the selected file in a vertical / horizontal split.
 - `<Leader>gv` toggles a Diffview of the working tree; `<Leader>gh` shows the current file's Git history.
 - `-` (or `<Leader>O`) opens the current file's directory in Oil. Edit the listing like text and `:w` to create, rename, move, or delete files.
 - Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available. Nix uses nixd, nixfmt, statix, and deadnix; YAML uses yaml-language-server with SchemaStore; Markdown uses marksman.
