@@ -363,7 +363,9 @@ tmux source-file ~/.config/tmux/tmux.conf
 A configuration reload does not replace an existing tmux server's binary. If
 tmux itself changed, use `tmux -L nix new` when that socket is unused, or choose
 another unused socket name, to start the new version without killing old panes.
-Reload Ghostty's configuration or restart the app when its settings change.
+Reload Ghostty's configuration (Cmd+Shift+, on macOS) when its settings change;
+window and titlebar settings apply to new windows, and macOS needs a full app
+restart for `background-opacity` changes.
 Restart Neovim for Lua changes; when `lazy-lock.json` changes, use `:Lazy restore`
 to align installed plugins with the committed lockfile, then restart.
 
@@ -413,6 +415,7 @@ before applying.
 |---|---|
 | `modules/`, `hosts/`, `flake.nix`, `flake.lock`, `shell/common.sh`, `bash/inputrc` | Home Manager switch on Unix, then a new shell |
 | `tmux/settings.conf` or tmux module settings | Home Manager switch, then tmux config reload; a new server for binary updates |
+| `modules/ghostty.nix` | Home Manager switch, then reload Ghostty and open a new window; on macOS, restart Ghostty for opacity changes |
 | Starship Nix settings and generated TOML | Publish both rendered files; Unix switches Home Manager, Windows reads the pulled TOML on the next prompt |
 | `nvim/` Lua | Restart Neovim on every platform |
 | `nvim/lazy-lock.json` | `:Lazy restore`, then restart Neovim |

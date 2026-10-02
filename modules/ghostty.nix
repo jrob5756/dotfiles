@@ -33,14 +33,37 @@
       cursor-style = "bar";
       cursor-style-blink = true;
 
-      background-opacity = 1;
+      # macOS only applies opacity changes after a full Ghostty restart.
+      background-opacity = 0.9;
+      background-blur = true;
+      # Also apply opacity to explicitly painted backgrounds (Neovim, tmux).
+      background-opacity-cells = true;
+
+      # Ghostty always confirms while tmux runs, but tmux keeps the sessions.
+      confirm-close-surface = false;
 
       # Ghostty measures scrollback in bytes, not lines.
       scrollback-limit = 10000000;
     }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+      # A transparent titlebar with no buttons or title is invisible but still
+      # draggable, unlike the "hidden" style.
       macos-titlebar-style = "transparent";
-      macos-option-as-alt = true;
+      macos-window-buttons = "hidden";
+      macos-titlebar-proxy-icon = "hidden";
+      # Ghostty trims unquoted whitespace, so the quotes must be literal.
+      title = ''" "'';
+      # Right Option still types characters such as é and —.
+      macos-option-as-alt = "left";
+
+      # The Mac's 2x 3840pt-wide main display wants a larger default than the
+      # shared palette size.
+      font-size = 16;
+
+      window-padding-x = 10;
+      # No top padding so text sits directly under the titlebar strip.
+      window-padding-y = "0,8";
+      window-padding-balance = true;
     };
   };
 }
