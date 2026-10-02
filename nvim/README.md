@@ -10,7 +10,13 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 - `yA` copies the whole file without moving the cursor. `unnamedplus` also sends normal yanks, deletes, and changes to the system clipboard.
 - `n` / `N` center search results and open folds containing matches.
 - The colorscheme is Catppuccin Mocha, matching Ghostty, tmux, bat, delta, and fzf.
-- `s` jumps anywhere on screen with flash.nvim by typing a few characters and a label; `S` selects a Treesitter node. In operator-pending mode, `r` acts on a remote location (for example `yr`). `/` and `?` searches show the same labels; `<C-s>` while searching toggles them. Flash also works in Neo-tree, where `|` / `_` open the selected file in a vertical / horizontal split.
+- Flash (flash.nvim) jumps with labels instead of counting or repeating motions:
+  - `s` jumps anywhere on screen: type a few characters, then the label shown at the target. It also works in Neo-tree, where `|` / `_` open the selected file in a vertical / horizontal split.
+  - `S` labels the Treesitter nodes around the cursor (expression, statement, function, and so on); pick a label to select that node. `dS` / `yS` / `cS` act on the chosen node directly.
+  - `yr` (also `dr` / `cr`) acts on text elsewhere without moving: flash to the spot, type a motion such as `iw`, and the cursor returns where it was.
+  - `yR` (also `dR` / `cR`) searches, then picks one of the Treesitter nodes around any match.
+  - `f` / `F` / `t` / `T` work across lines and highlight every match; press the same key again (or `;` / `,`) for the next / previous match.
+  - `/` and `?` searches label their matches too; `<C-s>` while searching toggles the labels.
 - `<Leader>gv` toggles a Diffview of the working tree; `<Leader>gh` shows the current file's Git history.
 - `-` (or `<Leader>O`) opens the current file's directory in Oil. Edit the listing like text and `:w` to create, rename, move, or delete files.
 - Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available. Nix uses nixd, nixfmt, statix, and deadnix; YAML uses yaml-language-server with SchemaStore; Markdown uses marksman.
