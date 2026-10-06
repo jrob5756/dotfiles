@@ -172,6 +172,16 @@ in
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
         zstyle ':completion:*' menu select
         bindkey -e
+        # The system zshrc binds Delete/Home/End in the keymap that was active
+        # then, which EDITOR=nvim makes viins, so `bindkey -e` drops them and an
+        # unbound Delete types a stray `~`. Cover tmux's and Ghostty's sequences.
+        bindkey '^[[3~' delete-char
+        bindkey '^[[1~' beginning-of-line
+        bindkey '^[[H' beginning-of-line
+        bindkey '^[OH' beginning-of-line
+        bindkey '^[[4~' end-of-line
+        bindkey '^[[F' end-of-line
+        bindkey '^[OF' end-of-line
         bindkey '^[[A' history-beginning-search-backward
         bindkey '^[[B' history-beginning-search-forward
         bindkey '^[[C' forward-suggestion-word
