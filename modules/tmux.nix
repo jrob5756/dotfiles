@@ -11,6 +11,16 @@ let
   # Backs the prefix ` popup. Hidden from both switchers.
   scratchSession = "scratch";
 
+  # A server started from a GUI (Ghostty's `command`) inherits a PATH without
+  # the Nix profile. Plugin scripts and the scratch popup call bare `tmux`, so
+  # without this every plugin binding (e.g. C-h/j/k/l) silently fails.
+  profilePath = ''
+    if-shell '! command -v tmux >/dev/null' {
+      set-environment -g PATH "${config.home.profileDirectory}/bin:$PATH"
+    }
+
+  '';
+
   theme = ''
     # Preserve the outer terminal's background and transparency; dim only inactive panes' default text.
     set -g window-style 'fg=${c.overlay1},bg=terminal'
@@ -192,6 +202,6 @@ in
   # must come before them: continuum hooks its autosave into status-right when it
   # loads, so setting status-right afterwards silently disables autosave.
   xdg.configFile."tmux/tmux.conf".text = lib.mkOrder 600 (
-    builtins.readFile ../tmux/settings.conf + "\n" + theme
+    profilePath + builtins.readFile ../tmux/settings.conf + "\n" + theme
   );
 }
