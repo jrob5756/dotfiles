@@ -190,10 +190,12 @@ in
       bind g display-popup -E -w 90% -h 90% -d '#{pane_current_path}' -T ' lazygit ' ${lib.getExe pkgs.lazygit}
       # prefix `: toggle a persistent scratch shell. The popup attaches a second
       # client to a hidden session, so its shell survives closing the popup.
+      # With the global detach-on-destroy off, `exit` would switch the popup's
+      # client to another session and shrink its windows; detach instead.
       bind '`' if-shell -F '#{==:#{session_name},${scratchSession}}' {
         detach-client
       } {
-        display-popup -E -w 80% -h 75% -d '#{pane_current_path}' -T ' scratch ' 'tmux new-session -A -s ${scratchSession}'
+        display-popup -E -w 80% -h 75% -d '#{pane_current_path}' -T ' scratch ' 'tmux new-session -A -s ${scratchSession} \; set-option -t ${scratchSession} detach-on-destroy on'
       }
     '';
   };
