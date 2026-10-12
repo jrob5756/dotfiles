@@ -70,7 +70,7 @@
 
       # The Mac's 2x 3840pt-wide main display wants a larger default than the
       # shared palette size.
-      font-size = 16;
+      font-size = 17;
 
       window-padding-x = 10;
       # No top padding so text sits directly under the titlebar strip.
