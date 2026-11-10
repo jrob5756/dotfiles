@@ -79,6 +79,11 @@ class TmuxTests(unittest.TestCase):
                     table = words.index("-T")
                     bindings[words[table + 2]] = words[table + 3:]
                 self.assertIn("confirm-before", bindings["&"])
+                self.assertEqual(
+                    bindings["x"],
+                    ["confirm-before", "-p", "kill-pane #P? (y/n)", "kill-pane"],
+                )
+                self.assertEqual(bindings["X"], ["kill-pane"])
                 self.assertNotIn("split-window", bindings.get("D", []))
                 self.assertEqual(
                     bindings["c"], ["new-window", "-c", "#{pane_current_path}"]

@@ -8,6 +8,7 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **Mouse support on** — click to select a pane, drag borders to resize, scroll to scroll a pane's history.
 - **`prefix |`** / **`prefix \`** / **`prefix _`** / **`prefix -`** — split the current pane right / left / down / up, opening in the current pane's directory (the `|` vsplit matches the mapping in the nvim config). Unshifted keys put the new pane above or to the left; shifted keys put it below or to the right.
 - **`prefix c`** — new windows also open in the current pane's directory.
+- **`prefix x`** — close the current pane after confirmation; **`prefix X`** closes it immediately.
 - **`prefix s`** — fuzzy session switcher in a popup: sessions (most recently used first), then zoxide's directories. Picking a directory opens a session named after it, rooted there, or switches to it if it already exists. Enter on a name that matches nothing creates a session in `~`; **Ctrl-O** creates one named exactly as typed even when it fuzzy-matches an entry. The built-in tree view is still on `prefix w`.
 - **`prefix f`** — fuzzy window switcher across all sessions (most recently active first), with a live preview of the highlighted window. Replaces tmux's built-in find-window.
 - **`prefix g`** — lazygit in a popup, for the current pane's directory.
