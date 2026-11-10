@@ -21,6 +21,14 @@ if vim.fn.has "win32" == 1 then
   }
 end
 
+local function open_horizontal_split(state, below)
+  local splitbelow = vim.o.splitbelow
+  vim.o.splitbelow = below
+  local ok, err = pcall(state.commands.open_split, state)
+  vim.o.splitbelow = splitbelow
+  if not ok then error(err) end
+end
+
 ---@type LazySpec
 return {
   "nvim-neo-tree/neo-tree.nvim",
@@ -39,8 +47,10 @@ return {
         -- Free s/S for flash.nvim; open in splits with the tmux split keys instead.
         ["s"] = "none",
         ["S"] = "none",
-        ["|"] = "open_vsplit",
-        ["_"] = "open_split",
+        ["\\"] = "open_leftabove_vs",
+        ["|"] = "open_rightbelow_vs",
+        ["-"] = { function(state) open_horizontal_split(state, false) end, desc = "Open in split above" },
+        ["_"] = { function(state) open_horizontal_split(state, true) end, desc = "Open in split below" },
       },
     },
     -- the Git Status source doesn't follow directory changes (`.` or `:cd`) by default,

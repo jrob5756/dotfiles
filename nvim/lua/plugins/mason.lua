@@ -12,6 +12,7 @@ local commands = {
   ["tree-sitter-cli"] = "tree-sitter",
   ["yaml-language-server"] = "yaml-language-server",
   ["marksman"] = "marksman",
+  ["vtsls"] = "vtsls",
 }
 
 local server_commands = {
@@ -22,6 +23,7 @@ local server_commands = {
   nixd = "nixd",
   yamlls = "yaml-language-server",
   marksman = "marksman",
+  vtsls = "vtsls",
 }
 
 ---@type LazySpec
@@ -91,6 +93,7 @@ return {
 
       local wanted = {
         "lua-language-server",
+        "vtsls",
         "csharp-language-server",
         "stylua",
         "csharpier",

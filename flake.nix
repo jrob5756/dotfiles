@@ -149,7 +149,7 @@
                 for tool in git rg fd lazygit curl tar node python3 debugpy-adapter \
                   basedpyright-langserver ruff lua-language-server stylua selene \
                   tree-sitter cc make dotnet csharp-ls csharpier nixd nixfmt statix deadnix \
-                  yaml-language-server marksman; do
+                  yaml-language-server marksman vtsls; do
                   command -v "$tool" >/dev/null
                 done
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux "command -v netcoredbg >/dev/null"}

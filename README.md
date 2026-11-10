@@ -48,7 +48,8 @@ Each tool can list its own keys, so start there when something is forgotten:
 | Ghostty | `Cmd+Shift+P` command palette |
 | tmux | `prefix ?` (prefix is `Ctrl-a`) |
 
-**Ghostty (macOS).** Windows open straight into the `main` tmux session. Drag the
+**Ghostty (macOS).** Each new window asks: `t` (or Enter) opens the `main` tmux
+session, `h` opens [herdr](https://herdr.dev), and `s` opens a plain shell. Drag the
 window by the invisible strip along its top edge. With the window buttons
 hidden, use `Cmd+W` to close, `Cmd+M` to minimize, and `Fn+Ctrl+F` to fill the
 screen. `Cmd+Shift+O` toggles transparency, `Cmd+Shift+,` reloads the config,
@@ -66,7 +67,7 @@ and `Cmd+0` resets the font size.
 
 **tmux** keys (`prefix s` sessions, `prefix f` windows, `prefix g` lazygit, and
 more) are in [`tmux/README.md`](tmux/README.md#highlights). **Neovim** keys
-(flash on `s`, Diffview on `Space g v`, Oil on `-`, and more) are in
+(flash on `s`, Diffview on `Space g v`, Oil on `Space O`, and more) are in
 [`nvim/README.md`](nvim/README.md#behavior-and-mappings).
 
 ## Get started on a fresh machine

@@ -80,7 +80,7 @@ assert(package.loaded.dap.adapters.coreclr == nil, "Missing Nix debugger must no
 
 reset()
 opts = mason_options()
-for _, name in ipairs { "basedpyright", "ruff", "debugpy", "lua-language-server", "stylua", "tree-sitter-cli" } do
+for _, name in ipairs { "basedpyright", "ruff", "debugpy", "lua-language-server", "vtsls", "stylua", "tree-sitter-cli" } do
   assert(vim.tbl_contains(opts.ensure_installed, name), "Missing manual install: " .. name)
 end
 assert(not vim.tbl_contains(opts.ensure_installed, "csharp-language-server"))
@@ -126,6 +126,7 @@ for _, command in ipairs {
   "nixd",
   "yaml-language-server",
   "marksman",
+  "vtsls",
 } do
   paths[command] = "/mock/" .. command
 end
@@ -141,7 +142,17 @@ spec("mason", "jay-babu/mason-null-ls.nvim").opts(nil, opts)
 assert(type(opts.handlers.selene) == "function")
 opts = { servers = { "custom_server" } }
 spec("mason", "AstroNvim/astrolsp").opts(nil, opts)
-for _, server in ipairs { "custom_server", "basedpyright", "ruff", "lua_ls", "csharp_ls", "nixd", "yamlls", "marksman" } do
+for _, server in ipairs {
+  "custom_server",
+  "basedpyright",
+  "ruff",
+  "lua_ls",
+  "csharp_ls",
+  "nixd",
+  "yamlls",
+  "marksman",
+  "vtsls",
+} do
   assert(vim.tbl_contains(opts.servers, server), "PATH LSP not enabled: " .. server)
 end
 spec("dotnet", "mfussenegger/nvim-dap").config()

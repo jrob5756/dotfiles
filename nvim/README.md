@@ -11,15 +11,15 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 - `n` / `N` center search results and open folds containing matches.
 - The colorscheme is Catppuccin Mocha, matching Ghostty, tmux, bat, delta, and fzf.
 - Flash (flash.nvim) jumps with labels instead of counting or repeating motions:
-  - `s` jumps anywhere on screen: type a few characters, then the label shown at the target. It also works in Neo-tree, where `|` / `_` open the selected file in a vertical / horizontal split.
+  - `s` jumps anywhere on screen: type a few characters, then the label shown at the target. It also works in Neo-tree, where `\` / `|` open the selected file in a left / right split and `-` / `_` open it in an above / below split.
   - `S` labels the Treesitter nodes around the cursor (expression, statement, function, and so on); pick a label to select that node. `dS` / `yS` / `cS` act on the chosen node directly.
   - `yr` (also `dr` / `cr`) acts on text elsewhere without moving: flash to the spot, type a motion such as `iw`, and the cursor returns where it was.
   - `yR` (also `dR` / `cR`) searches, then picks one of the Treesitter nodes around any match.
   - `f` / `F` / `t` / `T` work across lines and highlight every match; press the same key again (or `;` / `,`) for the next / previous match.
   - `/` and `?` searches label their matches too; `<C-s>` while searching toggles the labels.
 - `<Leader>gv` toggles a Diffview of the working tree; `<Leader>gh` shows the current file's Git history.
-- `-` (or `<Leader>O`) opens the current file's directory in Oil. Edit the listing like text and `:w` to create, rename, move, or delete files.
-- Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available. Nix uses nixd, nixfmt, statix, and deadnix; YAML uses yaml-language-server with SchemaStore; Markdown uses marksman.
+- `<Leader>O` opens the current file's directory in Oil. Edit the listing like text and `:w` to create, rename, move, or delete files.
+- Python uses basedpyright, Ruff, and debugpy. Lua uses lua-language-server and StyLua. C# uses csharp-ls, CSharpier, and netcoredbg when available. Nix uses nixd, nixfmt, statix, and deadnix; YAML uses yaml-language-server with SchemaStore; Markdown uses marksman; JavaScript and TypeScript use vtsls.
 - Conform owns formatting (`<Leader>lf` or `:Format`) and format-on-save. `<Leader>uf` / `<Leader>uF` toggle buffer/global autoformatting.
 - Copilot completion is integrated with blink.cmp. Run `:Copilot auth` to sign in.
 - On native Windows, `<Leader>tc`, `<Leader>t5`, and `<Leader>t7` open interactive cmd, Windows PowerShell, and PowerShell 7 terminals with profiles loaded. Background shell calls use PowerShell with `-NoProfile` to avoid blocking on interactive startup.
@@ -48,6 +48,7 @@ In these sessions, Mason does not automatically install or update tools, add its
 | `nixd`, `nixfmt`, `statix`, `deadnix` | Nix editing, formatting, and linting |
 | `yaml-language-server` | YAML editing with SchemaStore schemas (Kubernetes, GitHub Actions, and more) |
 | `marksman` | Markdown links, headings, and references |
+| `vtsls` | JavaScript and TypeScript editing |
 
 Language servers are explicitly enabled only when their executables are found on PATH. Python interpreter overrides from project configuration are preserved; active `VIRTUAL_ENV` and `CONDA_PREFIX` interpreters take precedence over the pinned toolchain's Python. If no interpreter is found, basedpyright is allowed to discover one instead of receiving an empty path.
 

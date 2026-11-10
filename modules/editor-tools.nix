@@ -27,5 +27,6 @@ with pkgs;
   deadnix
   yaml-language-server
   marksman
+  vtsls
 ]
 ++ lib.optionals stdenv.hostPlatform.isLinux [ netcoredbg ]

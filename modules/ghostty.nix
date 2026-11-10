@@ -5,6 +5,21 @@
   palette,
   ...
 }:
+let
+  # GUI launches lack the Nix profile on PATH; herdr panes need it to find
+  # agents and tools, so prepend it before handing off.
+  launcher = pkgs.writeShellScript "ghostty-launcher" ''
+    export PATH="${config.home.profileDirectory}/bin:$PATH"
+    printf '\n  [t] tmux    [h] herdr    [s] shell\n\n  Choice (Enter = tmux): '
+    IFS= read -rsn1 choice
+    printf '\n'
+    case "$choice" in
+      h | H) exec ${lib.getExe pkgs.herdr} ;;
+      s | S) exec "''${SHELL:-/bin/zsh}" -l ;;
+      *) exec ${lib.getExe config.programs.tmux.package} new-session -A -s main ;;
+    esac
+  '';
+in
 {
   programs.ghostty = {
     enable = true;
@@ -43,9 +58,9 @@
       # Ghostty always confirms while tmux runs, but tmux keeps the sessions.
       confirm-close-surface = false;
 
-      # Every window attaches to (or creates) the `main` tmux session. The
-      # absolute path matters because GUI launches lack the Nix profile on PATH.
-      command = "${lib.getExe config.programs.tmux.package} new-session -A -s main";
+      # Every window asks whether to attach to (or create) the `main` tmux
+      # session, attach to herdr's persistent session, or open a plain shell.
+      command = "${launcher}";
 
       mouse-hide-while-typing = true;
 

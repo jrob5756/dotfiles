@@ -12,6 +12,7 @@
       kubectl
       (lib.lowPrio minikube)
       uv
+      herdr
     ]
     ++ import ./editor-tools.nix pkgs
     ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
