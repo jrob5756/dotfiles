@@ -98,6 +98,7 @@ in
     c = "_dotfiles_copilot --yolo";
     p = "_dotfiles_copilot -sp";
     a = "env -u TMUX agency copilot --yolo";
+    ao = "env -u TMUX agency copilot --yolo --model claude-opus-5.5 --reasoning-effort high --context long_context";
   };
 
   home.sessionPath = map (path: "${config.home.homeDirectory}/${path}") [

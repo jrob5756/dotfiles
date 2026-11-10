@@ -27,6 +27,7 @@ containing it first.
 | Bash and Zsh behavior | `modules/shell.nix`, `shell/common.sh` | Nix payloads behind writable startup loaders |
 | Git pager (delta) | `modules/git.nix` | `~/.config/git/config`; `~/.gitconfig` stays private |
 | tmux settings and plugins | `modules/tmux.nix`, `tmux/settings.conf` | `~/.config/tmux/tmux.conf`, pinned plugins |
+| herdr keys (tmux-style) | `modules/herdr.nix` | `~/.config/herdr/config.toml` (read-only) |
 | Starship | `modules/starship-settings.nix` | Home Manager on Unix; generated TOML on Windows |
 | Neovim | `nvim/` | Live, writable symlink to Lua files |
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
@@ -47,6 +48,7 @@ Each tool can list its own keys, so start there when something is forgotten:
 | yazi | `F1` |
 | Ghostty | `Cmd+Shift+P` command palette |
 | tmux | `prefix ?` (prefix is `Ctrl-a`) |
+| herdr | `prefix ?` (same `Ctrl-a` prefix and keys as tmux) |
 
 **Ghostty (macOS).** Each new window asks: `t` (or Enter) opens the `main` tmux
 session, `h` opens [herdr](https://herdr.dev), and `s` opens a plain shell. Drag the
@@ -66,7 +68,8 @@ and `Cmd+0` resets the font size.
 | `, <cmd>` | Run any nixpkgs program without installing it |
 
 **tmux** keys (`prefix s` sessions, `prefix f` windows, `prefix g` lazygit, and
-more) are in [`tmux/README.md`](tmux/README.md#highlights). **Neovim** keys
+more) are in [`tmux/README.md`](tmux/README.md#highlights); **herdr** reuses them
+(see [herdr](tmux/README.md#herdr)). **Neovim** keys
 (flash on `s`, Diffview on `Space g v`, Oil on `Space O`, and more) are in
 [`nvim/README.md`](nvim/README.md#behavior-and-mappings).
 
@@ -451,6 +454,7 @@ before applying.
 | `modules/`, `hosts/`, `flake.nix`, `flake.lock`, `shell/common.sh`, `bash/inputrc` | Home Manager switch on Unix, then a new shell |
 | `tmux/settings.conf` or tmux module settings | Home Manager switch, then tmux config reload; a new server for binary updates |
 | `modules/ghostty.nix` | Home Manager switch, then reload Ghostty and open a new window; on macOS, restart Ghostty for opacity changes |
+| `herdr/agent-detection/` | Home Manager switch, then `herdr server reload-agent-manifests` |
 | Starship Nix settings and generated TOML | Publish both rendered files; Unix switches Home Manager, Windows reads the pulled TOML on the next prompt |
 | `nvim/` Lua | Restart Neovim on every platform |
 | `nvim/lazy-lock.json` | `:Lazy restore`, then restart Neovim |

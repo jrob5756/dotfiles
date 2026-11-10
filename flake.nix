@@ -193,6 +193,15 @@
                 python3 -m unittest discover -s ${./tests} -p 'test_tmux.py'
                 touch "$out"
               '';
+          herdr-config = pkgs.runCommand "herdr-config" { nativeBuildInputs = [ pkgs.herdr ]; } ''
+            export HOME=$TMPDIR
+            HERDR_CONFIG_PATH=${
+              self.homeConfigurations.${
+                if pkgs.stdenv.hostPlatform.isDarwin then "mac" else "wsl"
+              }.config.xdg.configFile."herdr/config.toml".source
+            } herdr config check
+            touch "$out"
+          '';
           migration =
             pkgs.runCommand "migration"
               {

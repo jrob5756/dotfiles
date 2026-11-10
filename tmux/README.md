@@ -80,3 +80,20 @@ Caveats worth knowing:
 
 - `vim-tmux-navigator` takes over `Ctrl-l`, so the shell's clear-screen moves to **`prefix Ctrl-l`**.
 - `vim-tmux-navigator` requires the matching side to be set up in Neovim too (a plugin, not just the `<C-h/j/k/l>` mappings already in `nvim/lua/plugins/astrocore.lua`) for the pane-vs-split detection to work perfectly. If `<C-h/j/k/l>` ever stops crossing between tmux and Neovim seamlessly, that's the first thing to check.
+
+## herdr
+
+[herdr](https://herdr.dev) uses the same keymap, set in `modules/herdr.nix`.
+Workspaces stand in for tmux sessions, tabs for windows, and panes for panes.
+
+- **`Ctrl-a`** prefix; **`prefix Ctrl-a`** sends a literal `Ctrl-a`.
+- **`Ctrl-h/j/k/l`** move between herdr panes and Neovim splits. Neovim, Vim, and fzf receive the key; Neovim hands focus back to herdr at its edge.
+- **`prefix |` `\` `_` `-`** (and `%` / `"`) split right / left / down / up. **`prefix x`** / **`prefix X`** close the pane, **`prefix !`** breaks it into a new tab, **`prefix z`** zooms, **`prefix o`** and **`prefix ;`** cycle and jump back, and **`prefix {` / `}`** swap.
+- **`prefix c`** opens a new tab in the current pane's directory; **`prefix C`** asks for a name first. **`prefix n` / `p` / `1`–`9`** switch tabs, **`prefix ,`** renames, and **`prefix &`** closes the tab (without tmux's confirmation).
+- **`prefix s`** is the workspace picker, **`prefix f`** (or `w`) a fuzzy go-to across workspaces, tabs, and panes, **`prefix (` / `)`** the previous / next workspace, **`prefix $`** renames it, and **`prefix d`** detaches.
+- **`prefix g`** opens lazygit and **`` prefix ` ``** a scratch shell, both as popups in the pane's directory. The scratch shell ends when you exit it; herdr popups don't persist like the tmux `scratch` session.
+- **`prefix Ctrl-l`** clears the screen, **`prefix r`** reloads the config, and **`prefix [`** enters copy mode.
+
+There is no tmux-fingers equivalent. The config file is a read-only Nix store
+link, so herdr's settings screen (`prefix S`) can't save changes; edit
+`modules/herdr.nix` and run `home-manager switch` instead.
