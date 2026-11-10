@@ -69,7 +69,7 @@ return {
     vim.api.nvim_create_autocmd("DirChanged", {
       desc = "Point Neo-tree's git_status source at the new working directory",
       callback = function()
-        if package.loaded["neo-tree"] then require("neo-tree.sources.manager").dir_changed("git_status") end
+        if package.loaded["neo-tree"] then require("neo-tree.sources.manager").dir_changed "git_status" end
       end,
     })
   end,

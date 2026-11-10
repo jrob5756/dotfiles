@@ -106,9 +106,7 @@ return {
         local command = commands[package]
         if command and vim.fn.executable(command) == 1 then return false end
         if package == "debugpy" and (toolchain.debugpy_adapter() or toolchain.debugpy_python()) then return false end
-        if package == "csharp-language-server" or package == "csharpier" then
-          return toolchain.have_dotnet_sdk()
-        end
+        if package == "csharp-language-server" or package == "csharpier" then return toolchain.have_dotnet_sdk() end
         return true
       end, merged)
     end,
