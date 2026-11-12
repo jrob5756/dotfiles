@@ -73,6 +73,7 @@ snapshots are not moved or deleted; when both directories exist, XDG wins.
 Caveats worth knowing:
 
 - Only the shell processes are recreated by default; arbitrary long-running programs inside panes are not resumed unless added to `@resurrect-processes`. Neovim is the exception here — `@resurrect-strategy-nvim session` restores it when a `Session.vim` exists in the pane's working directory.
+- Copilot CLI panes (`c`, `a`, `ao`, or plain `copilot`) reopen their session. After each save, a hook finds each pane's session ID (from the `inuse.<pid>.lock` its process holds under `~/.copilot/session-state/`, or the `--resume`/`--new-session-id` flag) and rewrites the saved command to `... --resume=<id>`. Prompt-mode (`-p`) runs are skipped. Anything since the last save is lost, so press `prefix Ctrl-s` before a planned restart.
 - Auto-restore needs *something* to start the tmux server. Ghostty does this when you pick tmux in a new window; on WSL the server dies with the distro, so it restores on your next manual `tmux`, not at boot.
 - Shell history, environment variables, and in-flight command state are not part of the snapshot — only the layout and the scrollback text.
 

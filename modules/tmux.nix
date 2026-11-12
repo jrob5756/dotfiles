@@ -131,6 +131,114 @@ let
       tmux switch-client -t "=$(cut -f1 <<<"$pick")"
     '';
   };
+
+  # resurrect post-save-layout hook: makes each pane running Copilot CLI
+  # restore into the same session by saving its command with --resume=<id>.
+  copilotResume = pkgs.writeShellApplication {
+    name = "tmux-resurrect-copilot";
+    runtimeInputs = [
+      config.programs.tmux.package
+      pkgs.ps
+      pkgs.coreutils
+    ];
+    text = ''
+      file=$1
+      tab=$'\t'
+      uuid='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+      flag="(^|[/ ])copilot .*--(new-session-id|session-id|resume)[= ]($uuid)"
+
+      declare -A children=() commands=() locks=() ids=()
+      while read -r pid ppid command; do
+        children[$ppid]+=" $pid"
+        commands[$pid]=$command
+      done < <(ps -Ao pid=,ppid=,command=)
+
+      # A running session holds inuse.<pid>.lock, which follows /resume switches.
+      for lock in "$HOME"/.copilot/session-state/*/inuse.*.lock; do
+        [ -e "$lock" ] || continue
+        pid=''${lock##*/inuse.}
+        dir=''${lock%/*}
+        locks[''${pid%.lock}]=''${dir##*/}
+      done
+
+      tree() {
+        local child
+        echo "$1"
+        for child in ''${children[$1]:-}; do tree "$child"; done
+      }
+
+      session_of() {
+        local pid
+        local -a pids
+        mapfile -t pids < <(tree "$1")
+        for pid in "''${pids[@]}"; do
+          [ -n "''${locks[$pid]:-}" ] && { echo "''${locks[$pid]}"; return 0; }
+        done
+        # A session resumed but not used yet has no lock; fall back to its flags.
+        for pid in "''${pids[@]}"; do
+          [[ ''${commands[$pid]:-} =~ $flag ]] && { echo "''${BASH_REMATCH[3]}"; return 0; }
+        done
+        return 0
+      }
+
+      # Prints the saved command relaunched through the shell's usual entry
+      # point, without session flags; fails for anything that isn't an
+      # interactive Copilot CLI.
+      resume_command() {
+        local launcher word i=0
+        local -a words kept=()
+        read -r -a words <<<"$1"
+        # npm installs run the CLI as `node .../copilot`.
+        [[ ''${words[0]:-} == node || ''${words[0]:-} == */node ]] && words=("''${words[@]:1}")
+        case ''${words[0]:-} in
+          agency)
+            [ "''${words[1]:-}" = copilot ] || return 1
+            launcher="env -u TMUX agency copilot"
+            words=("''${words[@]:2}")
+            ;;
+          copilot | */copilot)
+            launcher=_dotfiles_copilot
+            words=("''${words[@]:1}")
+            ;;
+          *) return 1 ;;
+        esac
+        while [ "$i" -lt "''${#words[@]}" ]; do
+          word=''${words[i]}
+          i=$((i + 1))
+          case $word in
+            -p | --prompt | --prompt=* | -[!-]*p*) return 1 ;;
+            --continue | --resume=* | --session-id=* | --new-session-id=*) ;;
+            # --resume's value is optional; without one it opens the picker.
+            -r | --resume) [[ ''${words[i]:--} == -* ]] || i=$((i + 1)) ;;
+            --session-id | --new-session-id) i=$((i + 1)) ;;
+            *) kept+=("$word") ;;
+          esac
+        done
+        echo "$launcher ''${kept[*]}''${kept[*]:+ }--resume=$2"
+      }
+
+      while IFS=$tab read -r session window pane pid; do
+        id=$(session_of "$pid")
+        [ -z "$id" ] || ids["$session$tab$window$tab$pane"]=$id
+      done < <(tmux list-panes -a -F "#{session_name}$tab#{window_index}$tab#{pane_index}$tab#{pane_pid}")
+      [ "''${#ids[@]}" -gt 0 ] || exit 0
+
+      # Pane lines: type, session, window, 3 window fields, pane index, title,
+      # dir, active, command name, then ":" and the full command.
+      lines=()
+      while IFS= read -r line; do
+        if [[ $line == pane$tab* ]]; then
+          id=''${ids[$(cut -f2,3,6 <<<"$line")]:-}
+          saved=$(cut -f11- <<<"$line")
+          if [ -n "$id" ] && command=$(resume_command "''${saved#:}" "$id"); then
+            line="$(cut -f1-10 <<<"$line")$tab:$command"
+          fi
+        fi
+        lines+=("$line")
+      done <"$file"
+      printf '%s\n' "''${lines[@]}" >"$file"
+    '';
+  };
 in
 {
   programs.tmux = {
@@ -169,6 +277,9 @@ in
           }
           set -g @resurrect-capture-pane-contents 'on'
           set -g @resurrect-strategy-nvim 'session'
+          # Reopen Copilot CLI sessions; the hook pins each to its session ID.
+          set -g @resurrect-hook-post-save-layout '${lib.getExe copilotResume}'
+          set -g @resurrect-processes '"~copilot.*--resume="'
         '';
       }
       {

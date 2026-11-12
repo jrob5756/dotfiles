@@ -5,6 +5,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -97,6 +98,64 @@ class TmuxTests(unittest.TestCase):
                 self.assertTrue(bindings["g"][-1].endswith("/bin/lazygit"), bindings["g"])
                 self.assertIn("if-shell", bindings["`"])
                 self.assertRegex(" ".join(bindings["`"]), r"new-session -A -s scratch")
+            finally:
+                subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@unittest.skipUnless(shutil.which("tmux") and MANAGED, "tmux and DOTFILES_TMUX_CONFIG are required")
+class CopilotResumeTests(unittest.TestCase):
+    def test_save_hook_pins_copilot_panes_to_their_sessions(self):
+        text = Path(MANAGED).read_text()
+        hook = re.search(r"@resurrect-hook-post-save-layout '([^']+)'", text).group(1)
+        self.assertIn("""@resurrect-processes '"~copilot.*--resume="'""", text)
+        flagged, locked, stale = (f"{n}{n * 7}-{n * 4}-{n * 4}-{n * 4}-{n * 12}" for n in "abc")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            socket = root / "socket"
+            copilot = root / "bin" / "copilot"
+            copilot.parent.mkdir()
+            copilot.write_text('#!/bin/sh\ntouch "$HOME/started.$$"\nsleep 60 &\ntrap \'kill $!\' EXIT HUP TERM\nwait\n')
+            copilot.chmod(0o755)
+            env = {**os.environ, "HOME": str(root), "TMUX": f"{socket},0,0"}
+
+            def tmux(*args):
+                return subprocess.run(["tmux", "-S", str(socket), *args], env=env,
+                                      text=True, capture_output=True, check=True).stdout.strip()
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "dev", "-x", "80", "-y", "24",
+                     f"{copilot} --yolo --new-session-id {flagged}")
+                # A /resume switch leaves stale flags; the lock names the live session.
+                tmux("new-window", "-d", "-t", "dev:", f"{copilot} --yolo --resume={stale}")
+                tmux("new-window", "-d", "-t", "dev:", "sleep 60")
+                panes = [line.split("\t") for line in tmux(
+                    "list-panes", "-a", "-F", "#{session_name}\t#{window_index}\t#{pane_index}\t#{pane_pid}"
+                ).splitlines()]
+                lock = root / ".copilot/session-state" / locked / f"inuse.{panes[1][3]}.lock"
+                lock.parent.mkdir(parents=True)
+                lock.touch()
+                for _ in range(50):
+                    if len(list(root.glob("started.*"))) >= 2:
+                        break
+                    time.sleep(0.1)
+
+                saved = [
+                    "agency copilot --yolo --model m --resume=x",
+                    "node /opt/homebrew/bin/copilot --yolo -r",
+                    "sleep 60",
+                ]
+                save = root / "save.txt"
+                prefix = lambda p: "\t".join(["pane", p[0], p[1], "1", ":*", p[2], "t", ":/tmp", "1", "x"])
+                save.write_text("".join(f"{prefix(p)}\t:{c}\n" for p, c in zip(panes, saved)) + "state\tdev\t\n")
+                subprocess.run([hook, str(save)], env=env, check=True)
+
+                self.assertEqual(save.read_text().splitlines(), [
+                    f"{prefix(panes[0])}\t:env -u TMUX agency copilot --yolo --model m --resume={flagged}",
+                    f"{prefix(panes[1])}\t:_dotfiles_copilot --yolo --resume={locked}",
+                    f"{prefix(panes[2])}\t:sleep 60",
+                    "state\tdev\t",
+                ])
             finally:
                 subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
