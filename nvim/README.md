@@ -8,6 +8,7 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 - Neo-tree opens at startup, and its git status follows the current working directory.
 - `<C-h/j/k/l>` navigates Neovim splits and tmux panes using `vim-tmux-navigator`. Under herdr (outside tmux) the same keys hand off to herdr panes at the editor's edge.
 - `yA` copies the whole file without moving the cursor. `unnamedplus` also sends normal yanks, deletes, and changes to the system clipboard.
+- `gR` reveals the current file (or the highlighted Neo-tree node) in Finder, or in Explorer on Windows/WSL. Lowercase `gr` stays Neovim's LSP prefix (`grn`, `grr`, `gra`, ...).
 - `n` / `N` center search results and open folds containing matches.
 - The colorscheme is Catppuccin Mocha, matching Ghostty, tmux, bat, delta, and fzf.
 - Flash (flash.nvim) jumps with labels instead of counting or repeating motions:

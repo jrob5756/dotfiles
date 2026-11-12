@@ -13,6 +13,37 @@ if vim.fn.has "win32" == 1 then
   }
 end
 
+-- Reveal the current file, or the Neo-tree node under the cursor, in the OS file manager.
+local function reveal_in_file_manager()
+  local path
+  if vim.bo.filetype == "neo-tree" then
+    local state = require("neo-tree.sources.manager").get_state_for_window()
+    local node = state and state.tree and state.tree:get_node()
+    path = node and node.path
+  else
+    path = vim.api.nvim_buf_get_name(0)
+  end
+  if not path or path == "" or not vim.uv.fs_stat(path) then
+    vim.notify("Nothing on disk to reveal", vim.log.levels.WARN)
+    return
+  end
+  path = vim.fn.fnamemodify(path, ":p")
+  local cmd
+  if vim.fn.has "mac" == 1 then
+    cmd = { "open", "-R", path }
+  elseif vim.fn.has "win32" == 1 then
+    cmd = { "explorer.exe", "/select," .. path }
+  elseif vim.fn.has "wsl" == 1 then
+    -- Windows directories aren't on PATH inside WSL.
+    local windows_path = vim.trim(vim.fn.system { "wslpath", "-w", path })
+    cmd = { "/mnt/c/Windows/explorer.exe", "/select," .. windows_path }
+  else
+    vim.ui.open(vim.fs.dirname(path))
+    return
+  end
+  vim.system(cmd, { detach = true })
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrocore",
@@ -50,6 +81,12 @@ return {
 
         -- Capital A preserves the "around" text objects; the cursor stays put.
         ["yA"] = { "<Cmd>%y+<CR>", desc = "Yank whole file to system clipboard" },
+
+        -- Capital R: lowercase gr is Neovim's LSP prefix (grn, grr, gra, ...).
+        ["gR"] = {
+          reveal_in_file_manager,
+          desc = vim.fn.has "mac" == 1 and "Reveal in Finder" or "Reveal in file manager",
+        },
 
         -- Normal mode only: recenter and open folds without breaking dn/cn.
         ["n"] = { "nzzzv", desc = "Next search result (centred)" },
