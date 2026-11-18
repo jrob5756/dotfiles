@@ -118,6 +118,8 @@ in
     MANPAGER = "sh -c 'col -bx | ${bat} --language=man --plain'";
     # Keep groff's formatting escapes out of the text bat highlights.
     MANROFFOPT = "-c";
+    # terminal-tools session browser: resume the way the `a` alias launches.
+    SESSION_BROWSER_RESUME_CMD = "env -u TMUX agency copilot --yolo --resume=";
   };
 
   programs.bash = {
