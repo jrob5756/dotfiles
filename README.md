@@ -32,7 +32,7 @@ containing it first.
 | Neovim | `nvim/` | Live, writable symlink to Lua files |
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
 | macOS apps and fonts | `Brewfile` | Homebrew casks via `brew bundle`; additive, never removes anything |
-| SSH client (macOS) | `modules/ssh.nix` | `~/.ssh/config` that includes the private `~/.ssh/config.local` |
+| SSH client (macOS) | `modules/ssh.nix` | `~/.ssh/config` that includes the private `~/.ssh/config.local` ([manual steps](#ssh-over-dev-tunnels-macos)) |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 | Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
 
@@ -106,7 +106,9 @@ Then follow [WSL / Linux / macOS migration](#wsl--linux--macos-migration):
 install Nix, install the native Mac app/fonts if applicable, preview, and apply.
 The same migration command handles a fresh home and existing OS-provided
 startup files.
-Keep the checkout in place afterward: Neovim uses it directly.
+Keep the checkout in place afterward: Neovim uses it directly. On a Mac that
+reaches remote machines over SSH, finish with the manual
+[SSH over dev tunnels](#ssh-over-dev-tunnels-macos) steps.
 
 ### Native Windows
 
@@ -166,7 +168,10 @@ conflicting files first.
 
 Keep custom functions and private settings in the matching
 [local override files](#shell-installers-and-private-settings). Existing local
-files are preserved. Review other custom startup code before cutover: the
+files are preserved. On macOS, migration backs up `~/.ssh/config`; move its
+hosts into `~/.ssh/config.local` as described in
+[SSH over dev tunnels](#ssh-over-dev-tunnels-macos). Review other custom
+startup code before cutover: the
 migrator preserves installer-managed blocks and supported exports, not every
 arbitrary command from an old shell configuration.
 
@@ -312,10 +317,97 @@ helpers, not installer requirements; see [shell/README.md](shell/README.md).
 This repository is public. Keep private exports, credentials, internal
 functions, and machine-only paths in local files outside the checkout.
 
-On macOS, Home Manager owns `~/.ssh/config`, which only includes
-`~/.ssh/config.local`. Put hosts, users, and keys there; migration backs up an
-existing `~/.ssh/config`, so move its hosts into `config.local` afterward.
-Keys and launchd agents for private tunnels stay local as well.
+## SSH over dev tunnels (macOS)
+
+Home Manager owns `~/.ssh/config`, which only contains
+`Include config.local`. Hosts, keys, and tunnel agents are private, so set
+them up by hand on each Mac; nothing below lives in this repository. Migration
+backs up an existing `~/.ssh/config`; move its hosts into
+`~/.ssh/config.local` afterward.
+
+The remote machine must already run `sshd` and host a dev tunnel that forwards
+its SSH port. That setup is not part of this repository.
+
+1. Create a key, then add the printed public key to the remote machine's
+   `authorized_keys`:
+
+   ```sh
+   ssh-keygen -t ed25519 -C "<this-mac>-><remote>"
+   cat ~/.ssh/id_ed25519.pub
+   ```
+
+2. Sign in to dev tunnels. The `devtunnel` CLI comes from the `Brewfile`.
+
+   ```sh
+   devtunnel user login
+   ```
+
+3. Add the host to `~/.ssh/config.local` (keep it `chmod 600`).
+   `HostKeyAlias` keeps each tunnel's host key separate, because every tunnel
+   listens on `127.0.0.1`.
+
+   ```text
+   Host <name>
+     HostName 127.0.0.1
+     Port <local-port>
+     User <remote-user>
+     IdentityFile ~/.ssh/id_ed25519
+     IdentitiesOnly yes
+     HostKeyAlias <name>
+   ```
+
+4. Keep the tunnel connected with a launchd agent. Save this as
+   `~/Library/LaunchAgents/<label>.plist`; it starts at login and restarts
+   `devtunnel connect` whenever it exits.
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+     <key>Label</key>
+     <string><label></string>
+     <key>ProgramArguments</key>
+     <array>
+       <string>/opt/homebrew/bin/devtunnel</string>
+       <string>connect</string>
+       <string><tunnel-id></string>
+     </array>
+     <key>RunAtLoad</key>
+     <true/>
+     <key>KeepAlive</key>
+     <true/>
+     <key>ThrottleInterval</key>
+     <integer>30</integer>
+     <key>ProcessType</key>
+     <string>Background</string>
+     <key>StandardOutPath</key>
+     <string>/Users/<user>/Library/Logs/<label>.log</string>
+     <key>StandardErrorPath</key>
+     <string>/Users/<user>/Library/Logs/<label>.log</string>
+   </dict>
+   </plist>
+   ```
+
+   Load it, and check the log for `listening on 127.0.0.1:<local-port>`:
+
+   ```sh
+   plutil -lint ~/Library/LaunchAgents/<label>.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist
+   tail ~/Library/Logs/<label>.log
+   ```
+
+   After editing the plist, run `launchctl bootout gui/$(id -u)/<label>`, then
+   bootstrap it again. Use the same `bootout` command to stop the tunnel.
+
+5. Compare the tunnel's host key with the fingerprint reported on the remote
+   machine, then connect. Accept the first-connection prompt only if they
+   match.
+
+   ```sh
+   ssh-keyscan -p <local-port> 127.0.0.1 | ssh-keygen -lf -
+   ssh <name>
+   ```
 
 ## Windows
 
