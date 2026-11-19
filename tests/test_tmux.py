@@ -159,3 +159,71 @@ class CopilotResumeTests(unittest.TestCase):
             finally:
                 subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@unittest.skipUnless(shutil.which("tmux") and shutil.which("bash") and MANAGED, "tmux, bash and DOTFILES_TMUX_CONFIG are required")
+class AgentStatusTests(unittest.TestCase):
+    def test_windows_badge_the_state_of_their_copilot_agents(self):
+        text = Path(MANAGED).read_text()
+        script = re.search(r"#\((/\S+/tmux-agent-status)\)", text).group(1)
+        self.assertIn(f"set-hook -g session-window-changed 'run-shell -b {script}'", text)
+        window_format = re.search(r"(?m)^\s*setw -g window-status-format '(.*)'$", text).group(1)
+        event = lambda kind, extra="": f'{{"type":"{kind}","data":{{{extra}}}}}'
+        working = [event("user.message"), event("assistant.turn_start")]
+        logs = {
+            "working": working,
+            "working2": working,
+            "input": [event("assistant.turn_start"), event("tool.execution_start", '"toolName":"ask_user"')],
+            "idle": [event("assistant.turn_end"), event("session.usage_checkpoint")],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            socket = root / "socket"
+            state = root / ".copilot/session-state"
+            env = {**os.environ, "HOME": str(root), "TMUX": f"{socket},0,0"}
+            env.pop("COPILOT_HOME", None)
+
+            def tmux(*args):
+                return subprocess.run(["tmux", "-S", str(socket), *args], env=env,
+                                      text=True, capture_output=True, check=True).stdout.strip()
+
+            def agent(name, *where):
+                session = state / name
+                session.mkdir(parents=True)
+                (session / "events.jsonl").write_text("\n".join(logs[name]) + "\n")
+                # Holds the session open the way Copilot does, in a process named copilot.
+                hold = f'"{session}/inuse.$$.hold"'
+                return tmux(*where, "-d", "-P", "-F", "#{window_id}", "bash", "-c",
+                            f"touch {hold}; exec 3<{hold}; exec -a copilot bash -c 'sleep 60; :'")
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "dev", "-x", "80", "-y", "24", "sleep 60")
+                tmux("setw", "-g", "window-status-format", window_format)
+                windows = {name: agent(name, "new-window", "-t", "dev:") for name in ("working", "input", "idle")}
+                agent("working2", "split-window", "-t", windows["working"])
+
+                def badges():
+                    subprocess.run([script], env=env, check=True)
+                    return {name: tmux("show", "-wqv", "-t", window, "@agent") for name, window in windows.items()}
+
+                expected = {"working": "working", "input": "input", "idle": ""}
+                for _ in range(50):
+                    if badges() == expected:
+                        break
+                    time.sleep(0.1)
+                self.assertEqual(badges(), expected)
+                self.assertEqual(tmux("display", "-p", "-t", windows["input"], "#{@agent_session}"), "input")
+                status = lambda name: tmux("display", "-p", "-t", windows[name], "#{E:window-status-format}")
+                self.assertIn("?", status("input"))
+                # Several agents in one window show a count per state.
+                self.assertEqual(tmux("show", "-wqv", "-t", windows["working"], "@agent_working"), "2")
+                self.assertIn("●2", status("working"))
+
+                # Finishing after the window was last viewed shows as done.
+                later = time.time() + 60
+                os.utime(state / "idle/events.jsonl", (later, later))
+                self.assertEqual(badges()["idle"], "done")
+                self.assertIn("✓", status("idle"))
+            finally:
+                subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

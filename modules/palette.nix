@@ -21,7 +21,9 @@
     text = "#cdd6f4";
     rosewater = "#f5e0dc";
     red = "#f38ba8";
+    peach = "#fab387";
     yellow = "#f9e2af";
+    green = "#a6e3a1";
     blue = "#89b4fa";
     lavender = "#b4befe";
     mauve = "#cba6f7";

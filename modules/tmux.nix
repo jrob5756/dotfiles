@@ -21,6 +21,27 @@ let
 
   '';
 
+  # Window badge for the Copilot CLI agents in a window, from the per-state
+  # counts agentStatus sets: ? waiting on you, ✗ error, ● working, ✓ finished
+  # since you last viewed the window. A count follows a symbol only when more
+  # than one agent is in that state (?●2: one waiting, two working). The
+  # current window's badge is plain to suit its highlighted background.
+  agentBadge =
+    styled:
+    let
+      count =
+        state: color: symbol:
+        let
+          n = "#{@agent_${state}}";
+        in
+        "#{?${n},${if styled then "#[fg=${color}]" else ""}${symbol}#{?#{e|>|:${n},1},${n},},}";
+    in
+    "#{?@agent, ,}"
+    + count "input" c.peach "?"
+    + count "error" c.red "✗"
+    + count "working" c.yellow "●"
+    + count "done" c.green "✓";
+
   theme = ''
     # Preserve the outer terminal's background and transparency; dim only inactive panes' default text.
     set -g window-style 'fg=${c.overlay1},bg=terminal'
@@ -33,15 +54,17 @@ let
     set -g pane-active-border-style 'fg=${c.blue},bold'
 
     # Status bar on the terminal background. The session badge turns red while
-    # the prefix is pending.
+    # the prefix is pending. status-right also runs the agent badge refresh,
+    # which prints nothing; the short interval keeps the badges current.
     set -g status-style 'bg=default,fg=${c.text}'
+    set -g status-interval 5
     set -g status-left-length 40
     set -g status-left '#[fg=${c.base},bold]#{?client_prefix,#[bg=${c.red}],#[bg=${c.blue}]} #S #[default] '
     set -g status-right-length 60
-    set -g status-right '#[fg=${c.yellow}]#{?window_zoomed_flag,ZOOM ,}#[fg=${c.overlay1}]%a %H:%M #[fg=${c.base},bg=${c.lavender},bold] #h '
+    set -g status-right '#(${lib.getExe agentStatus})#[fg=${c.yellow}]#{?window_zoomed_flag,ZOOM ,}#[fg=${c.overlay1}]%a %H:%M #[fg=${c.base},bg=${c.lavender},bold] #h '
     setw -g window-status-separator '''
-    setw -g window-status-format '#[fg=${c.overlay1}] #I:#W '
-    setw -g window-status-current-format '#[fg=${c.base},bg=${c.mauve},bold] #I:#W '
+    setw -g window-status-format '#[fg=${c.overlay1}] #I:#W${agentBadge true} '
+    setw -g window-status-current-format '#[fg=${c.base},bg=${c.mauve},bold] #I:#W${agentBadge false} '
     setw -g window-status-activity-style 'fg=${c.yellow}'
     set -g message-style 'bg=${c.surface0},fg=${c.text}'
     set -g message-command-style 'bg=${c.surface0},fg=${c.text}'
@@ -130,6 +153,20 @@ let
         --preview='tmux capture-pane -ep -t {1}' --preview-window='right,55%') || exit 0
       tmux switch-client -t "=$(cut -f1 <<<"$pick")"
     '';
+  };
+
+  # Tags panes and windows with the state of the Copilot CLI agents in them
+  # (see the script); the window formats render @agent as a badge.
+  agentStatus = pkgs.writeShellApplication {
+    name = "tmux-agent-status";
+    runtimeInputs = [
+      config.programs.tmux.package
+      pkgs.ps
+      pkgs.lsof
+      pkgs.gawk
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ../tmux/agent-status.sh;
   };
 
   # resurrect post-save-layout hook: makes each pane running Copilot CLI
@@ -293,6 +330,9 @@ in
     ];
 
     extraConfig = ''
+      # Refresh the agent badges as soon as you switch windows, so viewing a
+      # window clears its ✓ without waiting for the next status refresh.
+      set-hook -g session-window-changed 'run-shell -b ${lib.getExe agentStatus}'
       # prefix s: fuzzy session switcher; typing a new name creates that session.
       bind s display-popup -E -w 60% -h 50% -T ' sessions ' ${lib.getExe sessionSwitcher}
       # prefix f: fuzzy window switcher across all sessions, with a preview.
