@@ -8,7 +8,6 @@
     ./git.nix
     ./starship.nix
     ./tmux.nix
-    ./herdr.nix
     ./nvim.nix
     ./copilot.nix
   ];

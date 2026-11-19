@@ -6,7 +6,7 @@ Personal [AstroNvim](https://github.com/AstroNvim/AstroNvim) v6 configuration sh
 
 - `<S-Right>` / `<S-Left>` and `]b` / `[b]` select the next/previous buffer. In Neo-tree, shifted arrows switch Files/Buffers/Git sources.
 - Neo-tree opens at startup, and its git status follows the current working directory.
-- `<C-h/j/k/l>` navigates Neovim splits and tmux panes using `vim-tmux-navigator`. Under herdr (outside tmux) the same keys hand off to herdr panes at the editor's edge.
+- `<C-h/j/k/l>` navigates Neovim splits and tmux panes using `vim-tmux-navigator`.
 - `yA` copies the whole file without moving the cursor. `unnamedplus` also sends normal yanks, deletes, and changes to the system clipboard.
 - `gR` reveals the current file (or the highlighted Neo-tree node) in Finder, or in Explorer on Windows/WSL. Lowercase `gr` stays Neovim's LSP prefix (`grn`, `grr`, `gra`, ...).
 - `n` / `N` center search results and open folds containing matches.
