@@ -271,6 +271,18 @@ function Move-Item {
         self.require_success(self.invoke("-Rollback", str(manifests[-1])))
         self.assertEqual(terminal.read_text(), '{"fixture": true}')
 
+    def test_terminal_default_profile_follows_the_selected_shell(self):
+        terminal = self.local / "Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+        terminal.parent.mkdir(parents=True)
+        seed = (self.repo / "windows/windows-terminal/settings.json").read_bytes()
+        self.require_success(self.invoke("-Apply", "-IncludeWindowsTerminal", "-TerminalDefault", "Ubuntu"))
+        self.assertEqual(terminal.read_bytes(), seed)
+        self.require_success(self.invoke("-Apply", "-IncludeWindowsTerminal", "-TerminalDefault", "PowerShell"))
+        deployed, expected = json.loads(terminal.read_bytes()), json.loads(seed)
+        pwsh = next(profile for profile in expected["profiles"]["list"] if profile.get("commandline") == "pwsh.exe")
+        self.assertEqual(deployed["defaultProfile"], pwsh["guid"])
+        self.assertEqual({**deployed, "defaultProfile": expected["defaultProfile"]}, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

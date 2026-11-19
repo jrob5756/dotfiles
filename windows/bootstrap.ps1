@@ -3,6 +3,8 @@
 param(
     [Parameter(ParameterSetName = 'Migrate')][switch] $Apply,
     [Parameter(ParameterSetName = 'Migrate')][switch] $IncludeWindowsTerminal,
+    [Parameter(ParameterSetName = 'Migrate')][ValidateSet('Auto', 'Ubuntu', 'PowerShell')]
+    [string] $TerminalDefault = 'Auto',
     [Parameter(Mandatory, ParameterSetName = 'Rollback')][string] $Rollback,
     [string] $HomePath = $env:USERPROFILE,
     [string] $LocalAppDataPath = $env:LOCALAPPDATA,
@@ -288,8 +290,24 @@ if ($IncludeWindowsTerminal) {
         throw "Windows Terminal stable package not found: $terminalDir"
     }
     $terminalSource = Join-Path $repo 'windows\windows-terminal\settings.json'
-    Get-Content -LiteralPath $terminalSource -Raw | ConvertFrom-Json | Out-Null
-    Add-Plan (Join-Path $terminalDir 'settings.json') 'Copy' $terminalSource
+    $terminalText = Get-Content -LiteralPath $terminalSource -Raw
+    $terminal = $terminalText | ConvertFrom-Json
+    if ($TerminalDefault -eq 'Auto') {
+        # The seed's default tab runs `wsl.exe -d Ubuntu`; machines without that distro get PowerShell 7.
+        $distros = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.GetValue('DistributionName') })
+        $TerminalDefault = if ('Ubuntu' -in $distros) { 'Ubuntu' } else { 'PowerShell' }
+    }
+    if ($TerminalDefault -eq 'PowerShell') {
+        $pwshProfile = @($terminal.profiles.list | Where-Object {
+                $_.PSObject.Properties['commandline'] -and $_.commandline -eq 'pwsh.exe' }) | Select-Object -First 1
+        if (-not $pwshProfile) { throw 'Terminal seed has no pwsh.exe profile to use as the default.' }
+        $pattern = '("defaultProfile"\s*:\s*")' + [regex]::Escape($terminal.defaultProfile) + '"'
+        if ($terminalText -notmatch $pattern) { throw 'Terminal seed defaultProfile not found.' }
+        $terminalText = [regex]::Replace($terminalText, $pattern, "`${1}$($pwshProfile.guid)`"")
+    }
+    Write-Host "Windows Terminal default profile: $TerminalDefault"
+    Add-Plan (Join-Path $terminalDir 'settings.json') 'Text' '' $terminalText
 }
 foreach ($entry in $plan) { Write-Host "$($entry.Kind): $($entry.Path)" }
 if (-not $Apply) {
@@ -337,6 +355,7 @@ try {
                 'Link' { New-Item -ItemType SymbolicLink -Path $entry.Stage -Target $item.Target | Out-Null }
                 'Copy' { [IO.File]::WriteAllBytes($entry.Stage, [IO.File]::ReadAllBytes($item.Target)) }
                 'Loader' { Set-Content -LiteralPath $entry.Stage -Value $item.Content -Encoding utf8 }
+                'Text' { [IO.File]::WriteAllText($entry.Stage, $item.Content, [Text.UTF8Encoding]::new($false)) }
             }
             $entry.Fingerprint = Get-Fingerprint $entry.Stage
             $entry.State = 'Staged'
