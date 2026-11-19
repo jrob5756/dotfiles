@@ -32,6 +32,7 @@ containing it first.
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
 | macOS apps and fonts | `Brewfile` | Homebrew casks via `brew bundle`; additive, never removes anything |
 | SSH client (macOS) | `modules/ssh.nix` | `~/.ssh/config` that includes the private `~/.ssh/config.local` ([manual steps](#ssh-over-dev-tunnels-macos)) |
+| SSH server (Dev Box) | `windows/devbox-ssh/` | Opt-in user-mode `sshd` behind a dev tunnel ([Windows steps](windows/README.md#ssh-into-a-dev-box)) |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 | Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
 
@@ -322,7 +323,9 @@ backs up an existing `~/.ssh/config`; move its hosts into
 `~/.ssh/config.local` afterward.
 
 The remote machine must already run `sshd` and host a dev tunnel that forwards
-its SSH port. That setup is not part of this repository.
+its SSH port. On a Windows Dev Box, [`windows/devbox-ssh`](windows/README.md#ssh-into-a-dev-box)
+sets up both; use the account `whoami` prints there (`DOMAIN\user`) as
+`<remote-user>`.
 
 1. Create a key, then add the printed public key to the remote machine's
    `authorized_keys`:

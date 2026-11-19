@@ -3,7 +3,9 @@
 Native Windows consumes this checkout directly; Nix/Home Manager manages the
 Unix/WSL side separately. Run these commands **on Windows**, not inside WSL.
 Nothing in the bootstrap installs applications, changes execution policy, or
-copies private configuration into this public repository.
+copies private configuration into this public repository. The opt-in
+[Dev Box SSH server](#ssh-into-a-dev-box) is separate and does install
+OpenSSH and the devtunnel CLI.
 
 ## Prerequisites
 
@@ -153,6 +155,56 @@ The committed generated TOML lets native Windows consume the shared Starship
 settings without requiring Nix. See the root README and
 [`starship/README.md`](../starship/README.md) for regeneration and validation.
 
+## SSH into a Dev Box
+
+`devbox-ssh/setup.ps1` lets another machine SSH into a Microsoft Dev Box **as
+your own account**; the client side is in the root README's
+[SSH over dev tunnels](../README.md#ssh-over-dev-tunnels-macos). It is opt-in,
+separate from bootstrap, and refuses to run unless the computer name starts
+with `CPC-` (`-Force` overrides).
+
+The built-in `sshd` service logs users in through a domain controller, which
+Microsoft-hosted Dev Boxes cannot reach, and Microsoft Entra accounts cannot use
+key authentication. Instead, `sshd` runs as you inside your logon session, so it
+can only log in you and sessions get your full token (SSO, DPAPI, cached
+credentials). It listens on loopback only; a dev tunnel that only your account
+can connect to carries the traffic.
+
+```powershell
+pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1
+pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1 -Apply -AuthorizedKeysFile C:\path\to\client.pub
+```
+
+The first command previews; `-Apply` prompts for elevation once when needed and,
+on first use, opens a dev tunnels sign-in window. It sets up:
+
+| What | Where |
+|---|---|
+| OpenSSH Server, with the built-in `sshd` service stopped and disabled | Windows capability (elevated) |
+| PowerShell 7 as the OpenSSH default shell | `HKLM\SOFTWARE\OpenSSH` (elevated) |
+| `DevBox SSH` logon task running `supervisor.ps1` hidden; it restarts `sshd` and `devtunnel host` if they exit and renews the tunnel daily | Task Scheduler (elevated) |
+| devtunnel CLI, sign-in, and tunnel `<username>-devbox` with port 2222 | winget (user scope), dev tunnels service |
+| `sshd_config`, host key, supervisor copy, and `authorized_keys` | `%USERPROFILE%\.ssh\devbox-sshd`, readable only by you, SYSTEM and Administrators |
+
+`authorized_keys` is private and never overwritten: edit it directly or add keys
+with `-AuthorizedKeysFile`. `-TunnelId` and `-Port` override the defaults; tunnel
+IDs are global, so choose another if creation fails. Rerunning is safe. When the
+config, supervisor or task changes, it restarts `sshd` and the tunnel host, which
+drops SSH sessions open through the tunnel. `-Apply` prints the host key
+fingerprint to check on the client's first connection.
+
+- It only works while you have a logon session. Disconnecting from the desktop
+  is fine; after a restart, sign in once.
+- A new Dev Box has a new host key, so remove the old entry on the client
+  (`ssh-keygen -R <name>`). Host each tunnel ID from one machine at a time.
+- `ssh <name> 'command'` relies on the profile skipping PSReadLine when stdin is
+  redirected; otherwise PowerShell never exits.
+
+`-Uninstall` previews and `-Uninstall -Apply` unregisters the task, stops the
+processes and deletes the generated files. It keeps `authorized_keys`, OpenSSH
+Server (service disabled), the default shell and the tunnel
+(`devtunnel delete <id>` removes it).
+
 ## Validation
 
 Repository checks: `python -m unittest discover -s tests -p 'test_windows*.py'`.
@@ -163,3 +215,5 @@ or Linux checks do not verify Windows ACLs, filesystem behavior, or installed
 applications. After applying on Windows, open a new PowerShell 7 session and
 check `$PROFILE`, `Get-Command c,a,starship,nvim,git,rg,fd,lazygit,node,python`,
 `starship --version`, and Neovim `:checkhealth`.
+The Dev Box SSH tests only run the read-only preview; after `-Apply`, connect
+from the client to verify it.
