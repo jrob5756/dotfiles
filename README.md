@@ -32,6 +32,7 @@ containing it first.
 | Neovim | `nvim/` | Live, writable symlink to Lua files |
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
+| Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
 
 Machines still using the old manual Bash, Zsh, or tmux symlinks must run the
 [migration](#wsl--linux--macos-migration) before pulling past the removal of

@@ -10,6 +10,7 @@
     ./tmux.nix
     ./herdr.nix
     ./nvim.nix
+    ./copilot.nix
   ];
 
   programs.home-manager.enable = true;

@@ -202,6 +202,24 @@
             } herdr config check
             touch "$out"
           '';
+          copilot =
+            let
+              copilot = import ./modules/copilot-packages.nix pkgs;
+            in
+            pkgs.runCommand "copilot"
+              {
+                nativeBuildInputs = [
+                  pkgs.python3
+                  pkgs.sqlite
+                ];
+              }
+              ''
+                export DOTFILES_COPILOT_STATUSLINE=${lib.getExe copilot.statusLine}
+                export DOTFILES_COPILOT_MERGE_SETTINGS=${lib.getExe copilot.mergeSettings}
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_copilot.py'
+                touch "$out"
+              '';
           migration =
             pkgs.runCommand "migration"
               {
