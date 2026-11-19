@@ -18,6 +18,14 @@ if ($host.Name -eq 'ConsoleHost' -and -not [Console]::IsInputRedirected) {
     Set-PSReadLineOption -EditMode Windows
 }
 
+# Windows can refuse to traverse agency's user-created CurrentVersion junction
+# ("untrusted mount point"), so put the junction's real target on PATH instead.
+$agencyLink = Get-Item "$env:APPDATA\agency\CurrentVersion" -ErrorAction SilentlyContinue
+if ($agencyLink -and $agencyLink.Target) {
+    $agencyDir = @($agencyLink.Target)[0]
+    if (($env:Path -split ';') -notcontains $agencyDir) { $env:Path = "$agencyDir;$env:Path" }
+}
+
 function c { claude --dangerously-skip-permissions @args }
 function a { agency copilot --yolo @args }
 
