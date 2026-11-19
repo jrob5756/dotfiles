@@ -41,9 +41,8 @@ if ($TunnelId -cnotmatch '^[a-z0-9][a-z0-9-]{1,58}[a-z0-9](\.[a-z0-9]+)?$') {
     throw "Invalid tunnel ID '$TunnelId': use lowercase letters, digits and hyphens."
 }
 if (-not $DevTunnelPath) {
-    $DevTunnelPath = (Get-Command devtunnel -CommandType Application -ErrorAction SilentlyContinue |
-        Select-Object -First 1).Source
-    if (-not $DevTunnelPath) { $DevTunnelPath = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\devtunnel.exe' }
+    $found = Get-Command devtunnel -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $DevTunnelPath = if ($found) { $found.Source } else { Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\devtunnel.exe' }
 }
 
 $taskName = 'DevBox SSH'
@@ -150,8 +149,8 @@ function Get-RunningPart {
         Sshd = @($processes | Where-Object {
                 $_.Name -eq 'sshd.exe' -and $_.ProcessId -in $listeners -and (Test-Substring $_.CommandLine $stateDir) })
         Tunnel = @($processes | Where-Object {
-                $_.Name -eq 'devtunnel.exe' -and $_.CommandLine -match '\shost\s' -and
-                (Test-Substring $_.CommandLine $TunnelId) })
+                $_.Name -eq 'devtunnel.exe' -and $_.CommandLine -match '\shost\s+"?([^"\s]+)' -and
+                $Matches[1] -in $tunnelIds })
     }
 }
 
@@ -219,8 +218,11 @@ function Add-Step([string] $Kind, [string] $Name, [string] $Text) {
 }
 function Test-Planned([string] $Name) { [bool]($plan | Where-Object Name -EQ $Name) }
 
-$parts = Get-RunningPart
 $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+# Include the registered task's tunnel so changing -TunnelId also stops the old host.
+$tunnelIds = @($TunnelId)
+if ($task -and @($task.Actions)[0].Arguments -match '-TunnelId\s+(\S+)') { $tunnelIds += $Matches[1] }
+$parts = Get-RunningPart
 $generated = @()
 if (Test-Path -LiteralPath $stateDir) {
     $generated = @(Get-ChildItem -LiteralPath $stateDir -File | Where-Object Name -NE 'authorized_keys')
