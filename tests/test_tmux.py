@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import re
@@ -260,6 +261,51 @@ class AgentJumpTests(unittest.TestCase):
                     subprocess.run([jump], env=env, check=True)
                     visited.append(tmux("display", "-p", "#{pane_id}"))
                 self.assertEqual(visited, [panes[2], panes[3], panes[1], panes[2]])
+            finally:
+                subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@unittest.skipUnless(shutil.which("tmux") and MANAGED, "tmux and DOTFILES_TMUX_CONFIG are required")
+class AgentDashboardTests(unittest.TestCase):
+    def test_lists_live_agents_most_urgent_first_with_what_they_are_doing(self):
+        text = Path(MANAGED).read_text()
+        dashboard = re.search(r"bind A display-popup .* \"(/\S+/tmux-agent-dashboard) '#\{client_name\}'\"", text).group(1)
+        event = lambda kind, data: json.dumps({"type": kind, "timestamp": "2026-01-01T00:00:00.000Z", "data": data})
+        logs = {
+            "busy": [event("user.message", {"content": "build it"}),
+                     event("tool.execution_start", {"toolName": "bash", "toolTitle": "Running command",
+                                                    "arguments": {"description": "Run the tests"}})],
+            "asking": [event("user.message", {"content": "plan it"}),
+                       event("tool.execution_start", {"toolName": "ask_user",
+                                                      "arguments": {"message": "Which database?"}})],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            socket = root / "socket"
+            env = {**os.environ, "HOME": str(root), "TMUX": f"{socket},0,0"}
+            env.pop("COPILOT_HOME", None)
+
+            def tmux(*args):
+                return subprocess.run(["tmux", "-S", str(socket), *args], env=env,
+                                      text=True, capture_output=True, check=True).stdout.strip()
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "dev", "-x", "80", "-y", "24", "sleep 60")
+                for sid, state in [("busy", "working"), ("asking", "input")]:
+                    session = root / ".copilot/session-state" / sid
+                    session.mkdir(parents=True)
+                    (session / "events.jsonl").write_text("\n".join(logs[sid]) + "\n")
+                    (session / "workspace.yaml").write_text(f"id: {sid}\nname: {sid.title()} agent\n")
+                    pane = tmux("new-window", "-d", "-P", "-F", "#{pane_id}", "-t", "dev:", "sleep 60")
+                    tmux("set", "-p", "-t", pane, "@agent_state", state, ";",
+                         "set", "-p", "-t", pane, "@agent_session", sid)
+                rows = subprocess.run([dashboard, "--list"], env=env, text=True,
+                                      capture_output=True, check=True).stdout
+                rows = [re.sub(r"\x1b\[[0-9;]*m", "", row) for row in rows.splitlines()]
+                self.assertEqual(len(rows), 2)
+                self.assertRegex(rows[0], r"\? needs you +Asking agent .*asks: Which database\?")
+                self.assertRegex(rows[1], r"● working +Busy agent .*Running command: Run the tests")
             finally:
                 subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

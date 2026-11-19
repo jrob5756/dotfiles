@@ -219,6 +219,20 @@ let
     text = builtins.readFile ../tmux/agent-jump.sh;
   };
 
+  # prefix A: popup dashboard of live Copilot CLI agents (see the script).
+  agentDashboard = pkgs.writeShellApplication {
+    name = "tmux-agent-dashboard";
+    runtimeInputs = [
+      config.programs.tmux.package
+      pkgs.fzf
+      pkgs.jq
+      pkgs.gawk
+      pkgs.gnugrep
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ../tmux/agent-dashboard.sh;
+  };
+
   # resurrect post-save-layout hook: makes each pane running Copilot CLI
   # restore into the same session by saving its command with --resume=<id>.
   copilotResume = pkgs.writeShellApplication {
@@ -385,6 +399,8 @@ in
       set-hook -g session-window-changed 'run-shell -b ${lib.getExe agentStatus}'
       # prefix a: jump to the next Copilot agent waiting on you, errored or finished.
       bind a run-shell "${lib.getExe agentJump} '#{client_name}'"
+      # prefix A: dashboard of live Copilot agents; enter jumps to one.
+      bind A display-popup -E -w 90% -h 80% -T ' agents ' "${lib.getExe agentDashboard} '#{client_name}'"
       # prefix s: fuzzy session switcher; typing a new name creates that session.
       bind s display-popup -E -w 60% -h 50% -T ' sessions ' ${lib.getExe sessionSwitcher}
       # prefix f: fuzzy window switcher across all sessions, with a preview.
