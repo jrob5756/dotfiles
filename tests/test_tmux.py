@@ -232,3 +232,34 @@ class AgentStatusTests(unittest.TestCase):
             finally:
                 subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@unittest.skipUnless(shutil.which("tmux") and MANAGED, "tmux and DOTFILES_TMUX_CONFIG are required")
+class AgentJumpTests(unittest.TestCase):
+    def test_jumps_to_agents_that_need_you_most_urgent_first(self):
+        text = Path(MANAGED).read_text()
+        jump = re.search(r'bind a run-shell "(/\S+/tmux-agent-jump) \'#\{client_name\}\'"', text).group(1)
+        with tempfile.TemporaryDirectory() as temporary:
+            socket = Path(temporary) / "socket"
+            env = {**os.environ, "TMUX": f"{socket},0,0"}
+
+            def tmux(*args):
+                return subprocess.run(["tmux", "-S", str(socket), *args], env=env,
+                                      text=True, capture_output=True, check=True).stdout.strip()
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "dev", "-x", "80", "-y", "24", "sleep 60")
+                panes = [tmux("display", "-p", "#{pane_id}")]
+                for _ in range(3):
+                    panes.append(tmux("new-window", "-d", "-P", "-F", "#{pane_id}", "-t", "dev:", "sleep 60"))
+                for pane, state in zip(panes, ["working", "done", "input", "error"]):
+                    tmux("set", "-p", "-t", pane, "@agent_state", state)
+
+                visited = []
+                for _ in range(4):
+                    subprocess.run([jump], env=env, check=True)
+                    visited.append(tmux("display", "-p", "#{pane_id}"))
+                self.assertEqual(visited, [panes[2], panes[3], panes[1], panes[2]])
+            finally:
+                subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -12,6 +12,7 @@ Prefix key is remapped to **`Ctrl-a`** (from the default `Ctrl-b`).
 - **`prefix s`** — fuzzy session switcher in a popup: sessions (most recently used first), then zoxide's directories. Picking a directory opens a session named after it, rooted there, or switches to it if it already exists. Enter on a name that matches nothing creates a session in `~`; **Ctrl-O** creates one named exactly as typed even when it fuzzy-matches an entry. The built-in tree view is still on `prefix w`.
 - **`prefix f`** — fuzzy window switcher across all sessions (most recently active first), with a live preview of the highlighted window. Replaces tmux's built-in find-window.
 - **`prefix g`** — lazygit in a popup, for the current pane's directory.
+- **`prefix a`** — jump to the next Copilot agent that needs you: waiting on you first, then errored, then finished (the window badges below). Press again to cycle; with none it says so.
 - **`` prefix ` ``** — toggle a scratch shell in a popup. It's a hidden `scratch` session, so the shell and its history survive closing the popup. Neither switcher lists it.
 - **`prefix F`** — tmux-fingers: labels SHAs, paths, URLs, IPs, UUIDs and similar on screen with short hints; typing a hint copies the match. `prefix J` jumps the copy-mode cursor to a match instead. Copies go through tmux (`load-buffer -w`), so they reach the system clipboard over OSC 52 on every host.
 - **Closing a session doesn't exit tmux**: `detach-on-destroy off` moves you to another session when the last window of the current one closes.

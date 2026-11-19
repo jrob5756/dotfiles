@@ -208,6 +208,17 @@ let
     text = builtins.readFile ../tmux/agent-status.sh;
   };
 
+  # prefix a: jump to the next Copilot CLI agent that needs you (see the script).
+  agentJump = pkgs.writeShellApplication {
+    name = "tmux-agent-jump";
+    runtimeInputs = [
+      config.programs.tmux.package
+      pkgs.gawk
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ../tmux/agent-jump.sh;
+  };
+
   # resurrect post-save-layout hook: makes each pane running Copilot CLI
   # restore into the same session by saving its command with --resume=<id>.
   copilotResume = pkgs.writeShellApplication {
@@ -372,6 +383,8 @@ in
       # Refresh the agent badges as soon as you switch windows, so viewing a
       # window clears its ✓ without waiting for the next status refresh.
       set-hook -g session-window-changed 'run-shell -b ${lib.getExe agentStatus}'
+      # prefix a: jump to the next Copilot agent waiting on you, errored or finished.
+      bind a run-shell "${lib.getExe agentJump} '#{client_name}'"
       # prefix s: fuzzy session switcher; typing a new name creates that session.
       bind s display-popup -E -w 60% -h 50% -T ' sessions ' ${lib.getExe sessionSwitcher}
       # prefix f: fuzzy window switcher across all sessions, with a preview.
