@@ -218,6 +218,11 @@ class AgentStatusTests(unittest.TestCase):
                 # Several agents in one window show a count per state.
                 self.assertEqual(tmux("show", "-wqv", "-t", windows["working"], "@agent_working"), "2")
                 self.assertIn("●2", status("working"))
+                # The status bar sums every agent on the server.
+                summary = re.search(r"(?m)^\s*set -g status-right '#\(\S+\)(.*?)#\[fg=#f9e2af\]#\{\?window_zoomed", text).group(1)
+                tmux("set", "-g", "status-right", summary)
+                self.assertEqual(re.sub(r"#\[[^]]*\]", "", tmux("display", "-p", "#{E:status-right}")),
+                                 "agents ?1 ●2 ○1 │")
 
                 # Finishing after the window was last viewed shows as done.
                 later = time.time() + 60

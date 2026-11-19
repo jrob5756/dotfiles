@@ -42,6 +42,44 @@ let
     + count "working" c.yellow "●"
     + count "done" c.green "✓";
 
+  # Status-bar summary of every Copilot CLI agent on the server, from the
+  # @agents_<state> counts agentStatus sets: "agents ?1 ●2 ○3 │". Only states
+  # with agents appear, and the segment disappears when none are running.
+  agentSummary =
+    let
+      states = [
+        {
+          name = "input";
+          color = c.peach;
+          symbol = "?";
+        }
+        {
+          name = "error";
+          color = c.red;
+          symbol = "✗";
+        }
+        {
+          name = "working";
+          color = c.yellow;
+          symbol = "●";
+        }
+        {
+          name = "done";
+          color = c.green;
+          symbol = "✓";
+        }
+        {
+          name = "idle";
+          color = c.overlay1;
+          symbol = "○";
+        }
+      ];
+      n = state: "#{@agents_${state.name}}";
+      any = lib.foldr (state: rest: if rest == "" then n state else "#{||:${n state},${rest}}") "" states;
+      part = state: "#{?${n state},#[fg=${state.color}]${state.symbol}${n state} ,}";
+    in
+    "#{?${any},#[fg=${c.overlay1}]agents ${lib.concatMapStrings part states}#[fg=${c.surface1}]│ ,}";
+
   theme = ''
     # Preserve the outer terminal's background and transparency; dim only inactive panes' default text.
     set -g window-style 'fg=${c.overlay1},bg=terminal'
@@ -54,14 +92,15 @@ let
     set -g pane-active-border-style 'fg=${c.blue},bold'
 
     # Status bar on the terminal background. The session badge turns red while
-    # the prefix is pending. status-right also runs the agent badge refresh,
-    # which prints nothing; the short interval keeps the badges current.
+    # the prefix is pending. status-right runs the agent refresh (it prints
+    # nothing) and then shows the agent summary; the short interval keeps the
+    # badges and summary current.
     set -g status-style 'bg=default,fg=${c.text}'
     set -g status-interval 5
     set -g status-left-length 40
     set -g status-left '#[fg=${c.base},bold]#{?client_prefix,#[bg=${c.red}],#[bg=${c.blue}]} #S #[default] '
-    set -g status-right-length 60
-    set -g status-right '#(${lib.getExe agentStatus})#[fg=${c.yellow}]#{?window_zoomed_flag,ZOOM ,}#[fg=${c.overlay1}]%a %H:%M #[fg=${c.base},bg=${c.lavender},bold] #h '
+    set -g status-right-length 100
+    set -g status-right '#(${lib.getExe agentStatus})${agentSummary}#[fg=${c.yellow}]#{?window_zoomed_flag,ZOOM ,}#[fg=${c.overlay1}]%a %H:%M #[fg=${c.base},bg=${c.lavender},bold] #h '
     setw -g window-status-separator '''
     setw -g window-status-format '#[fg=${c.overlay1}] #I:#W${agentBadge true} '
     setw -g window-status-current-format '#[fg=${c.base},bg=${c.mauve},bold] #I:#W${agentBadge false} '

@@ -4,6 +4,8 @@
 #   window @agent        the most urgent pane state: input > error > working > done
 #          @agent_<state> how many panes are in each of those states (unset if none)
 #          @agent_seen   when the window was last viewed (epoch seconds)
+#   global @agents_<state> how many agents are in each state across all
+#                          sessions, including idle (unset if none)
 # "done" means the agent finished after you last viewed its window, so viewing
 # the window clears it. Runs from status-right as #(tmux-agent-status) and on
 # window switches.
@@ -70,7 +72,7 @@ rank() {
   esac
 }
 
-declare -A tty_pids=() pane_state=() pane_session=() win_state=() win_count=() win_seen=()
+declare -A tty_pids=() pane_state=() pane_session=() win_state=() win_count=() win_seen=() total=()
 if [ -n "$pids" ]; then
   while read -r pid tty; do
     [ "$tty" = "??" ] || tty_pids[$tty]+="$pid "
@@ -118,6 +120,7 @@ while IFS=$us read -r pane pane_tty window active attached seen title; do
 
   pane_state[$pane]=$state
   pane_session[$pane]=$shown
+  total[$state]=$((${total[$state]:-0} + 1))
   win_count[$window:$state]=$((${win_count[$window:$state]:-0} + 1))
   if [ "$(rank "$state")" -gt "$(rank "${win_state[$window]:-}")" ]; then
     win_state[$window]=$state
@@ -149,4 +152,15 @@ while read -r window; do
     fi
   done
 done < <(tmux list-windows -a -F '#{window_id}')
+for state in input error working "done" idle; do
+  if [ -n "${total[$state]:-}" ]; then
+    commands+=(set -g "@agents_$state" "${total[$state]}" \;)
+  else
+    commands+=(set -gu "@agents_$state" \;)
+  fi
+done
+# Option changes alone don't redraw the status line.
+while read -r client; do
+  commands+=(refresh-client -S -t "$client" \;)
+done < <(tmux list-clients -F '#{client_name}' 2>/dev/null)
 [ "${#commands[@]}" -eq 0 ] || tmux "${commands[@]}" >/dev/null 2>&1 || true
