@@ -1,3 +1,6 @@
 _: {
-  imports = [ ./ghostty.nix ];
+  imports = [
+    ./ghostty.nix
+    ./ssh.nix
+  ];
 }

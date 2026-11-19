@@ -31,6 +31,8 @@ containing it first.
 | Starship | `modules/starship-settings.nix` | Home Manager on Unix; generated TOML on Windows |
 | Neovim | `nvim/` | Live, writable symlink to Lua files |
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
+| macOS apps and fonts | `Brewfile` | Homebrew casks via `brew bundle`; additive, never removes anything |
+| SSH client (macOS) | `modules/ssh.nix` | `~/.ssh/config` that includes the private `~/.ssh/config.local` |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 | Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
 
@@ -209,14 +211,15 @@ The fresh-machine or existing-machine steps above establish this checkout.
 `hosts/linux.nix`, and `hosts/mac.nix` contain the username, home directory,
 and checkout path. Change those if they differ on that machine.
 
-On **macOS**, also install the native Ghostty app and fonts using Homebrew:
+On **macOS**, also install the native apps and fonts listed in the `Brewfile`:
 
 ```sh
-brew install --cask ghostty font-jetbrains-mono-nerd-font font-symbols-only-nerd-font
+brew bundle --file=Brewfile
 ```
 
-Homebrew must already be installed for that command. Home Manager manages the
-Ghostty config but not its signed macOS app. Linux gets Ghostty and fonts from
+Homebrew must already be installed for that command. It only installs missing
+casks and never removes unlisted ones. Home Manager manages the Ghostty config
+but not its signed macOS app. Linux gets Ghostty and fonts from
 Nix. WSL uses Windows Terminal and does not install Ghostty.
 The migration also backs up alternate `config.ghostty` files and the native
 macOS Ghostty configs, if present, so they do not override Home Manager's config.
@@ -309,6 +312,11 @@ helpers, not installer requirements; see [shell/README.md](shell/README.md).
 This repository is public. Keep private exports, credentials, internal
 functions, and machine-only paths in local files outside the checkout.
 
+On macOS, Home Manager owns `~/.ssh/config`, which only includes
+`~/.ssh/config.local`. Put hosts, users, and keys there; migration backs up an
+existing `~/.ssh/config`, so move its hosts into `config.local` afterward.
+Keys and launchd agents for private tunnels stay local as well.
+
 ## Windows
 
 Use the separate instructions in [windows/README.md](windows/README.md).
@@ -375,7 +383,8 @@ and WSL clones separately. Keep host-specific edits committed where appropriate,
 and private machine settings outside the repo so routine pulls stay manageable.
 If an update adds native prerequisites, install those separately using the
 platform setup instructions. A Home Manager switch does not upgrade the macOS
-Homebrew app, and the Windows bootstrap does not install or upgrade winget apps.
+Homebrew apps (run `brew bundle --file=Brewfile` for those), and the Windows
+bootstrap does not install or upgrade winget apps.
 
 **Neovim and native Windows config links point at the live checkout.** A pull
 can therefore change the files they read immediately. Close those applications
@@ -455,6 +464,7 @@ before applying.
 | `modules/`, `hosts/`, `flake.nix`, `flake.lock`, `shell/common.sh`, `bash/inputrc` | Home Manager switch on Unix, then a new shell |
 | `tmux/settings.conf` or tmux module settings | Home Manager switch, then tmux config reload; a new server for binary updates |
 | `modules/ghostty.nix` | Home Manager switch, then reload Ghostty and open a new window; on macOS, restart Ghostty for opacity changes |
+| `Brewfile` | `brew bundle --file=Brewfile` on macOS |
 | `herdr/agent-detection/` | Home Manager switch, then `herdr server reload-agent-manifests` |
 | Starship Nix settings and generated TOML | Publish both rendered files; Unix switches Home Manager, Windows reads the pulled TOML on the next prompt |
 | `nvim/` Lua | Restart Neovim on every platform |
