@@ -1,7 +1,8 @@
 # Public defaults; the writable bootstrap loader sources private overrides afterward.
 
-# PSReadLine — PS7-only prediction options, ConsoleHost only.
-if ($host.Name -eq 'ConsoleHost') {
+# PSReadLine — PS7-only prediction options, interactive ConsoleHost only.
+# With redirected stdin (e.g. `ssh host 'cmd'`), CompletionPredictor's runspace keeps pwsh from exiting.
+if ($host.Name -eq 'ConsoleHost' -and -not [Console]::IsInputRedirected) {
     Import-Module PSReadLine
 
     # CompletionPredictor is optional; don't fail the profile if it's absent.
