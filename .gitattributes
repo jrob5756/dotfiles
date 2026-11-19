@@ -6,3 +6,4 @@ tmux/*.conf text eol=lf
 shell/*.sh text eol=lf
 generated/*.toml text eol=lf
 starship/*.toml text eol=lf
+nvim/lazy-lock.json text eol=lf
