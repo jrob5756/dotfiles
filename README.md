@@ -109,19 +109,22 @@ reaches remote machines over SSH, finish with the manual
 
 ### Native Windows
 
-Install PowerShell 7.4+, Git, and the application prerequisites listed in
-[windows/README.md](windows/README.md#prerequisites). Enable Developer Mode
-for symlinks, or use an elevated PowerShell as the same user.
+Install the applications in [windows/winget.json](windows/README.md#prerequisites)
+(PowerShell 7.4+, Git, the editor toolchain, Windows Terminal, and the Nerd
+Font). Enable Developer Mode for symlinks, or use an elevated PowerShell as the
+same user.
 
 From PowerShell 7:
 
 ```powershell
-New-Item -ItemType Directory -Force -Path C:\src | Out-Null
-git clone https://github.com/jrob5756/dotfiles C:\src\dotfiles
+git clone https://github.com/jrob5756/dotfiles $HOME\dotfiles
 if ($LASTEXITCODE -ne 0) { throw 'Clone failed; resolve that before continuing.' }
-Set-Location C:\src\dotfiles
+Set-Location $HOME\dotfiles
 pwsh -NoProfile -File .\windows\bootstrap.ps1
 ```
+
+The PowerShell loader records the checkout path. If `$PROFILE` lives in a
+synced folder such as OneDrive, clone to the same path on every machine.
 
 Review the preview, then apply:
 
@@ -475,7 +478,8 @@ and private machine settings outside the repo so routine pulls stay manageable.
 If an update adds native prerequisites, install those separately using the
 platform setup instructions. A Home Manager switch does not upgrade the macOS
 Homebrew apps (run `brew bundle --file=Brewfile` for those), and the Windows
-bootstrap does not install or upgrade winget apps.
+bootstrap does not install or upgrade winget apps (rerun the `winget import`
+from [windows/README.md](windows/README.md#prerequisites) for new ones).
 
 **Neovim and native Windows config links point at the live checkout.** A pull
 can therefore change the files they read immediately. Close those applications

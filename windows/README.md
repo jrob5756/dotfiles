@@ -9,32 +9,26 @@ OpenSSH and the devtunnel CLI.
 
 ## Prerequisites
 
-Use the existing `winget` package workflow from PowerShell:
+Install the applications listed in [`winget.json`](winget.json) from the
+checkout:
 
 ```powershell
-$packages = @(
-    'Microsoft.PowerShell', 'Git.Git', 'Neovim.Neovim', 'Starship.Starship',
-    'BurntSushi.ripgrep.MSVC', 'sharkdp.fd', 'JesseDuffield.lazygit',
-    'OpenJS.NodeJS.LTS', 'Python.Python.3.12'
-)
-foreach ($package in $packages) {
-    winget install --exact --id $package --source winget
-    if ($LASTEXITCODE -ne 0) { throw "winget failed for $package; resolve this before continuing." }
-}
+winget import --import-file .\windows\winget.json --no-upgrade --accept-package-agreements --accept-source-agreements
 ```
 
-If winget reports an already-installed/up-to-date package with a nonzero exit,
-verify it and rerun for the remaining packages; do not suppress every error.
+`--no-upgrade` skips packages that are already installed; without it, winget
+tries to upgrade them and can report failure even when nothing is missing.
+Add new Windows applications to `winget.json` rather than to these instructions.
 Close the shell and open **PowerShell 7.4 or newer** afterward to refresh `PATH`. Git and a
 C/C++ compiler usable by Neovim's native plugins are needed; see
 [`nvim/README.md`](../nvim/README.md) for editor prerequisites and checks. Real
-Python must resolve on PATH, not the Microsoft Store alias stub.
+Python must resolve on PATH, not the Microsoft Store alias stub; turn off the
+`python.exe` App execution aliases if `python --version` opens the Store.
 
-Optional terminal: `winget install --exact --id Microsoft.WindowsTerminal --source winget`.
-If using the seed, install JetBrainsMono Nerd Font
-(`winget install --exact --id DEVCOM.JetBrainsMonoNerdFont --source winget`,
-which installs machine-wide). Windows lists it as `JetBrainsMono NF`, which is
-the face name the seed uses. The seed's default profile, **Ubuntu (tmux)**,
+The list includes Windows Terminal and JetBrainsMono Nerd Font, which installs
+machine-wide and prompts for elevation. Windows lists it as `JetBrainsMono NF`,
+which is the face name the Terminal seed uses; without it, Starship icons render
+as boxes. The seed's default profile, **Ubuntu (tmux)**,
 opens WSL straight into tmux, reattaching to the most recent session if the
 server is running; the plain **Ubuntu** profile starts without tmux. Claude
 and your custom Agency installation are separate prerequisites for `c` and `a`;
@@ -142,6 +136,11 @@ This explicit replacement participates in the same backup/rollback transaction.
 Preview/unpackaged Terminal locations are not guessed; a missing stable-package
 directory is an error. Terminal rewrites its settings in place, so a symlink
 would risk writing into the public checkout.
+
+The default tab is **Ubuntu (tmux)** when an `Ubuntu` WSL distribution is
+registered, and the PowerShell 7 profile otherwise. Override with
+`-TerminalDefault Ubuntu` or `-TerminalDefault PowerShell`; rerun with
+`Ubuntu` after installing WSL to switch.
 
 The Ubuntu seed keeps **UbuntuLegit**. Image basenames (`thor.png`, `hulk.png`,
 `venom.png`, `deadpool.png`) are retained under
