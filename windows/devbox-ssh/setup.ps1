@@ -56,6 +56,9 @@ $hostKey = Join-Path $stateDir 'ssh_host_ed25519_key'
 $authorizedKeys = Join-Path $stateDir 'authorized_keys'
 $supervisor = Join-Path $stateDir 'supervisor.ps1'
 $supervisorSource = Join-Path $PSScriptRoot 'supervisor.ps1'
+# OpenSSH enables RedirectionGuard for sshd, so SSH sessions refuse symlinks created without
+# elevation. Bootstrap's links are tested under the same policy and re-created elevated if needed.
+$bootstrapLinks = @((Join-Path $env:LOCALAPPDATA 'nvim'), (Join-Path $HomePath '.config\starship.toml'))
 $userSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $privateSids = @($userSid, 'S-1-5-18', 'S-1-5-32-544')
 if (-not $TaskUser) { $TaskUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name }
@@ -63,6 +66,29 @@ if (-not $TaskUser) { $TaskUser = [Security.Principal.WindowsIdentity]::GetCurre
 function Get-TaskArguments {
     "--headless `"$pwshExe`" -NoProfile -ExecutionPolicy Bypass -File `"$supervisor`" " +
     "-TunnelId $TunnelId -DevTunnel `"$DevTunnelPath`""
+}
+
+function Get-UntrustedLink {
+    $links = @($bootstrapLinks | Where-Object {
+            $item = Get-Item -LiteralPath $_ -Force -ErrorAction SilentlyContinue
+            $item -and $item.LinkType -eq 'SymbolicLink' })
+    if (-not $links) { return }
+    # Enforcing the policy cannot be undone, so probe from a child process. Windows without
+    # RedirectionGuard rejects the call, and then every link is followable.
+    $quoted = ($links | ForEach-Object { "'$($_.Replace("'", "''"))'" }) -join ','
+    $probe = @"
+Add-Type -Namespace DevBoxSsh -Name Native -MemberDefinition '[DllImport("kernel32.dll")] public static extern bool SetProcessMitigationPolicy(int policy, ref int value, System.IntPtr size);'
+`$enforce = 1
+if (-not [DevBoxSsh.Native]::SetProcessMitigationPolicy(16, [ref] `$enforce, [IntPtr] 4)) { exit 0 }
+foreach (`$path in @($quoted)) {
+    try {
+        if ((Get-Item -LiteralPath `$path -Force).PSIsContainer) { `$null = [IO.Directory]::GetFileSystemEntries(`$path) }
+        else { [IO.File]::OpenRead(`$path).Dispose() }
+    }
+    catch { `$path }
+}
+"@
+    & $pwshExe -NoProfile -NonInteractive -Command $probe
 }
 
 function Invoke-AdminStep([string] $Name) {
@@ -92,6 +118,16 @@ function Invoke-AdminStep([string] $Name) {
                 -Settings $settings | Out-Null
         }
         'UnregisterTask' { Unregister-ScheduledTask -TaskName $taskName -Confirm:$false }
+        'TrustLinks' {
+            foreach ($path in @(Get-UntrustedLink)) {
+                $target = (Get-Item -LiteralPath $path -Force).LinkTarget
+                $old = "$path.dotfiles-untrusted"
+                Move-Item -LiteralPath $path -Destination $old
+                try { New-Item -ItemType SymbolicLink -Path $path -Target $target | Out-Null }
+                catch { Move-Item -LiteralPath $old -Destination $path; throw }
+                (Get-Item -LiteralPath $old -Force).Delete()
+            }
+        }
         default { throw "Unknown elevated step: $Name" }
     }
 }
@@ -258,6 +294,11 @@ else {
     $taskAction = if ($task) { @($task.Actions)[0] } else { $null }
     if (-not $taskAction -or $taskAction.Execute -ne $conhost -or $taskAction.Arguments -ne (Get-TaskArguments)) {
         Add-Step Admin RegisterTask "register the '$taskName' logon task"
+    }
+    $untrustedLinks = @(Get-UntrustedLink)
+    if ($untrustedLinks) {
+        Add-Step Admin TrustLinks ("re-create dotfiles symlinks elevated so SSH sessions can follow them: " +
+            ($untrustedLinks -join ', '))
     }
 
     if (-not (Test-Path -LiteralPath $DevTunnelPath -PathType Leaf)) {

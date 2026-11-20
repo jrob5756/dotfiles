@@ -61,6 +61,22 @@ class DevBoxSshPreviewTests(unittest.TestCase):
         self.assertIn("Inspection only; nothing changed.", result.stdout)
         self.assertEqual(self.home_contents(), [])
 
+    def test_preview_offers_to_trust_symlinks_ssh_sessions_cannot_follow(self):
+        config = self.home / ".config"
+        config.mkdir()
+        (config / "target.toml").write_text("format = '$directory'\n")
+        try:
+            (config / "starship.toml").symlink_to(config / "target.toml")
+        except OSError:
+            self.skipTest("Creating symlinks needs Developer Mode or elevation")
+        (self.home / "nvim").mkdir()  # a real directory, not a link
+        result = self.invoke(env={"LOCALAPPDATA": str(self.home)})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        steps = [line for line in result.stdout.splitlines() if "follow them" in line]
+        self.assertEqual(len(steps), 1, result.stdout)
+        self.assertIn(str(config / "starship.toml"), steps[0])
+        self.assertNotIn(str(self.home / "nvim"), steps[0])
+
 
 if __name__ == "__main__":
     unittest.main()

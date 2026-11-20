@@ -184,6 +184,15 @@ on first use, opens a dev tunnels sign-in window. It sets up:
 | `DevBox SSH` logon task running `supervisor.ps1` hidden; it restarts `sshd` and `devtunnel host` if they exit and renews the tunnel daily | Task Scheduler (elevated) |
 | devtunnel CLI, sign-in, and tunnel `<username>-devbox` with port 2222 | winget (user scope), dev tunnels service |
 | `sshd_config`, host key, supervisor copy, and `authorized_keys` | `%USERPROFILE%\.ssh\devbox-sshd`, readable only by you, SYSTEM and Administrators |
+| Bootstrap's Neovim and Starship symlinks, re-created elevated when needed | `%LOCALAPPDATA%\nvim`, `%USERPROFILE%\.config\starship.toml` (elevated) |
+
+OpenSSH for Windows enables RedirectionGuard for `sshd.exe`, and SSH sessions
+inherit it: they refuse to follow symlinks created without elevation, which is
+how bootstrap creates them under Developer Mode. Starship then prints
+`untrusted mount point (os error 448)` and falls back to its default prompt,
+and Neovim starts without the config. Setup tests the links under the same
+policy and re-creates only the ones SSH sessions cannot follow. Rerun it
+after bootstrap replaces a link.
 
 `authorized_keys` is private and never overwritten: edit it directly or add keys
 with `-AuthorizedKeysFile`. `-TunnelId` and `-Port` override the defaults; tunnel
