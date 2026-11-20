@@ -97,6 +97,11 @@ class SessionToolsTests(Temp):
         self.run_tool("session-browser", "--tag-toggle", "x", SESSION_BROWSER_PICK_FILE=str(pick))
         self.assertEqual((self.tags("abc-1"), self.tags("abc-2")), ([], []))
 
+    def test_ids_lists_each_visible_session_once_without_group_headers(self):
+        listed = self.root / "listed"
+        listed.write_text("\tgroup a\nabc-1\tone\nabc-2\ttwo\n\tgroup b\nabc-1\tone again\n")
+        self.assertEqual(self.run_tool("session-browser", "--ids", str(listed)), "abc-1\nabc-2\n")
+
     def test_help_comes_from_the_script_not_the_wrapper(self):
         self.assertIn("Usage: session-tags <command>", self.run_tool("session-tags", "--help"))
 

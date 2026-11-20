@@ -14,7 +14,7 @@
 #   alt-t   add or remove tags on the current or marked sessions
 #   alt-g   group by tag instead of repo
 #   ctrl-space  mark sessions; ctrl-x deletes the marked ones (or the current one)
-#   ctrl-y  copy the session id
+#   ctrl-y  copy the session id; alt-y copies every visible session's id, one per line
 #   ctrl-e  show the full history in the preview (default: the latest events)
 #   ctrl-/  toggle preview layout
 #   ?       show or hide this key list (on an empty query; otherwise types "?")
@@ -593,6 +593,10 @@ open_here() {
   exec $RESUME_CMD"$id"
 }
 
+# Print the ids in file $1 (fzf {*f}) once each, in list order; group header
+# lines have no id, and grouped by tag a session can be listed more than once.
+list_ids() { awk -F'\t' '$1 != "" && !seen[$1]++ { print $1 }' "$1"; }
+
 # Open every session listed in file $1 (fzf {*f}) in tmux panes,
 # PER_WINDOW panes per new window.
 open_all() {
@@ -917,7 +921,7 @@ header_text() {
       "${k}enter ${r} resume        ${k}ctrl-o${r} resume all    ${k}ctrl-x${r} delete        ${k}ctrl-space${r} mark" \
       "${k}tab   ${r} next field    ${k}ctrl-s${r} search↔filter ${k}ctrl-t${r} open only     ${k}alt-a${r} SDK sessions" \
       "${k}alt-t ${r} tag           ${k}alt-g ${r} group by tag  ${k}ctrl-r${r} refresh       ${k}ctrl-e${r} full history" \
-      "${k}ctrl-/${r} layout        ${k}ctrl-y${r} copy id"
+      "${k}ctrl-/${r} layout        ${k}ctrl-y${r} copy id       ${k}alt-y ${r} copy all ids"
   else
     printf '%s\n' "● open  ◌ background  ${d}·${r}  ${k}enter${r} resume  ${d}·${r}  ${k}tab${r} repo/tag  ${d}·${r}  ${k}alt-t${r} tag  ${d}·${r}  ${k}?${r} keys"
   fi
@@ -977,6 +981,7 @@ case "${1:-}" in
   --inuse)     inuse; exit ;;
   --open-here) open_here "$2"; exit ;;
   --open-all)  open_all "$2"; exit ;;
+  --ids)       list_ids "$2"; exit ;;
   --delete)    delete_sessions "$2"; exit ;;
   --tag-picker) tag_picker "$2"; exit ;;
   --tag-list)   tag_list "${2:-}"; exit ;;
@@ -1025,6 +1030,7 @@ list "$TERM_ARG" | fzf --ansi --no-sort --multi --height=100% --delimiter=$'\t' 
   --preview-window='down,40%,wrap,border-top,follow,~4' \
   --bind='ctrl-/:change-preview-window(right,60%,wrap,border-left,follow,~4|down,40%,wrap,border-top,follow,~4)' \
   --bind='ctrl-y:transform:[ -n {1} ] && echo "execute-silent(printf %s {1} | pbcopy)+abort"' \
+  --bind="alt-y:execute-silent($SELF --ids {*f} | pbcopy)+abort" \
   --bind="ctrl-o:execute($SELF --open-all {*f})+abort" \
   --bind="ctrl-x:execute($SELF --delete {+f})+clear-selection+reload($SELF --refresh)" \
   --bind='load:first+transform:[ -n {1} ] || echo down' \
