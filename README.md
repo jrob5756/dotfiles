@@ -31,7 +31,7 @@ containing it first.
 | Neovim | `nvim/` | Live, writable symlink to Lua files |
 | Ghostty | `modules/ghostty.nix` | Linux package and config; macOS config |
 | macOS apps and fonts | `Brewfile` | Homebrew casks via `brew bundle`; additive, never removes anything |
-| SSH client (macOS) | `modules/ssh.nix` | `~/.ssh/config` that includes the private `~/.ssh/config.local` ([manual steps](#ssh-over-dev-tunnels-macos)) |
+| SSH client (macOS) | `modules/ssh.nix`, `modules/devbox.nix`, `devbox/` | `~/.ssh/config` that includes the private `~/.ssh/config.local` and `~/.ssh/devboxes/`; `devbox-add` and its tunnel watchdog ([Dev Box steps](#ssh-over-dev-tunnels-macos)) |
 | SSH server (Dev Box) | `windows/devbox-ssh/` | Opt-in user-mode `sshd` behind a dev tunnel ([Windows steps](windows/README.md#ssh-into-a-dev-box)) |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 | Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
@@ -106,8 +106,8 @@ install Nix, install the native Mac app/fonts if applicable, preview, and apply.
 The same migration command handles a fresh home and existing OS-provided
 startup files.
 Keep the checkout in place afterward: Neovim uses it directly. On a Mac that
-reaches remote machines over SSH, finish with the manual
-[SSH over dev tunnels](#ssh-over-dev-tunnels-macos) steps.
+reaches Dev Boxes over SSH, finish with
+[SSH over dev tunnels](#ssh-over-dev-tunnels-macos).
 
 ### Native Windows
 
@@ -321,97 +321,51 @@ functions, and machine-only paths in local files outside the checkout.
 
 ## SSH over dev tunnels (macOS)
 
-Home Manager owns `~/.ssh/config`, which only contains
-`Include config.local`. Hosts, keys, and tunnel agents are private, so set
-them up by hand on each Mac; nothing below lives in this repository. Migration
-backs up an existing `~/.ssh/config`; move its hosts into
-`~/.ssh/config.local` afterward.
+Home Manager owns `~/.ssh/config`. It includes your private
+`~/.ssh/config.local` and the per-box files `devbox-add` writes under
+`~/.ssh/devboxes/`; none of them live in this repository. Migration backs up an
+existing `~/.ssh/config`; move its hosts into `~/.ssh/config.local` afterward.
 
-The remote machine must already run `sshd` and host a dev tunnel that forwards
-its SSH port. On a Windows Dev Box, [`windows/devbox-ssh`](windows/README.md#ssh-into-a-dev-box)
-sets up both; use the account `whoami` prints there (`DOMAIN\user`) as
-`<remote-user>`.
+To reach a new Windows Dev Box, for example `jasonrobert-8`:
 
-1. Create a key, then add the printed public key to the remote machine's
-   `authorized_keys`:
+1. Once per Mac, create a key and sign in to dev tunnels (the `devtunnel` CLI
+   comes from the `Brewfile`):
 
    ```sh
-   ssh-keygen -t ed25519 -C "<this-mac>-><remote>"
-   cat ~/.ssh/id_ed25519.pub
-   ```
-
-2. Sign in to dev tunnels. The `devtunnel` CLI comes from the `Brewfile`.
-
-   ```sh
+   ssh-keygen -t ed25519 -C "<this-mac>->devbox"
    devtunnel user login
    ```
 
-3. Add the host to `~/.ssh/config.local` (keep it `chmod 600`).
-   `HostKeyAlias` keeps each tunnel's host key separate, because every tunnel
-   listens on `127.0.0.1`.
+2. On the Dev Box, give it a name and your public key
+   ([details](windows/README.md#ssh-into-a-dev-box)). The name is also its
+   tunnel ID, and the box gets a port no other box uses:
 
-   ```text
-   Host <name>
-     HostName 127.0.0.1
-     Port <local-port>
-     User <remote-user>
-     IdentityFile ~/.ssh/id_ed25519
-     IdentitiesOnly yes
-     HostKeyAlias <name>
+   ```powershell
+   .\windows\devbox-ssh\setup.ps1 -Name jasonrobert-8 -AuthorizedKeysFile C:\path\to\id_ed25519.pub -Apply
    ```
 
-4. Keep the tunnel connected with a launchd agent. Save this as
-   `~/Library/LaunchAgents/<label>.plist`; it starts at login and restarts
-   `devtunnel connect` whenever it exits.
-
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-     <key>Label</key>
-     <string><label></string>
-     <key>ProgramArguments</key>
-     <array>
-       <string>/opt/homebrew/bin/devtunnel</string>
-       <string>connect</string>
-       <string><tunnel-id></string>
-     </array>
-     <key>RunAtLoad</key>
-     <true/>
-     <key>KeepAlive</key>
-     <true/>
-     <key>ThrottleInterval</key>
-     <integer>30</integer>
-     <key>ProcessType</key>
-     <string>Background</string>
-     <key>StandardOutPath</key>
-     <string>/Users/<user>/Library/Logs/<label>.log</string>
-     <key>StandardErrorPath</key>
-     <string>/Users/<user>/Library/Logs/<label>.log</string>
-   </dict>
-   </plist>
-   ```
-
-   Load it, and check the log for `listening on 127.0.0.1:<local-port>`:
+3. On the Mac, add it. The first time, pass the account `whoami` prints on the
+   box; later boxes reuse it.
 
    ```sh
-   plutil -lint ~/Library/LaunchAgents/<label>.plist
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist
-   tail ~/Library/Logs/<label>.log
+   devbox-add jasonrobert-8 'DOMAIN\user'
+   ssh jasonrobert-8
    ```
 
-   After editing the plist, run `launchctl bootout gui/$(id -u)/<label>`, then
-   bootstrap it again. Use the same `bootout` command to stop the tunnel.
+`devbox-add` reads the box's port from its tunnel, writes
+`~/.ssh/devboxes/<name>.conf` (with `HostKeyAlias <name>`, because every box
+listens on `127.0.0.1`), and loads the launchd agent
+`dotfiles.devtunnel.<name>`. The agent runs `devtunnel-forward`, which restarts
+`devtunnel connect` whenever it stops forwarding, including after relay errors
+or while the box sleeps. On first login it trusts the box's host key and prints
+its fingerprint; compare it with the one `setup.ps1` printed.
 
-5. Compare the tunnel's host key with the fingerprint reported on the remote
-   machine, then connect. Accept the first-connection prompt only if they
-   match.
-
-   ```sh
-   ssh-keyscan -p <local-port> 127.0.0.1 | ssh-keygen -lf -
-   ssh <name>
-   ```
+- `devbox-add --list` shows each box's port and whether it is forwarding; the
+  agent logs to `~/Library/Logs/devtunnel-<name>.log`.
+- Rerun `devbox-add <name>` after changing the box's port.
+- `devbox-add --remove <name>` stops the agent and forgets the box and its host
+  key. A rebuilt box with the same name has a new host key: remove and add it
+  again.
 
 ## Windows
 

@@ -170,19 +170,22 @@ credentials). It listens on loopback only; a dev tunnel that only your account
 can connect to carries the traffic.
 
 ```powershell
-pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1
-pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1 -Apply -AuthorizedKeysFile C:\path\to\client.pub
+pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1 -Name jasonrobert-8
+pwsh -NoProfile -File .\windows\devbox-ssh\setup.ps1 -Name jasonrobert-8 -Apply -AuthorizedKeysFile C:\path\to\client.pub
 ```
 
 The first command previews; `-Apply` prompts for elevation once when needed and,
-on first use, opens a dev tunnels sign-in window. It sets up:
+on first use, opens a dev tunnels sign-in window. `-Name` is required the first
+time: it names the box for clients (`ssh jasonrobert-8`) and is also its tunnel
+ID. Later runs reuse the installed name and port, so plain
+`setup.ps1 -Apply` updates a box in place. It sets up:
 
 | What | Where |
 |---|---|
 | OpenSSH Server, with the built-in `sshd` service stopped and disabled | Windows capability (elevated) |
 | PowerShell 7 as the OpenSSH default shell | `HKLM\SOFTWARE\OpenSSH` (elevated) |
-| `DevBox SSH` logon task running `supervisor.ps1` hidden; it restarts `sshd` and `devtunnel host` if they exit and renews the tunnel daily | Task Scheduler (elevated) |
-| devtunnel CLI, sign-in, and tunnel `<username>-devbox` with port 2222 | winget (user scope), dev tunnels service |
+| `DevBox SSH` logon task running `supervisor.ps1` hidden; it restarts `sshd` and `devtunnel host` if they exit or the tunnel reports no host, and renews the tunnel daily | Task Scheduler (elevated) |
+| devtunnel CLI, sign-in, and tunnel `<name>` described as `SSH to <computer>`, with one port | winget (user scope), dev tunnels service |
 | `sshd_config`, host key, supervisor copy, and `authorized_keys` | `%USERPROFILE%\.ssh\devbox-sshd`, readable only by you, SYSTEM and Administrators |
 | Bootstrap's Neovim and Starship symlinks, re-created elevated when needed | `%LOCALAPPDATA%\nvim`, `%USERPROFILE%\.config\starship.toml` (elevated) |
 
@@ -194,17 +197,28 @@ and Neovim starts without the config. Setup tests the links under the same
 policy and re-creates only the ones SSH sessions cannot follow. Rerun it
 after bootstrap replaces a link.
 
+Each box needs its own port, because `devtunnel connect` on a client forwards
+the box's port to the same local port. A new box takes the lowest port from
+2222 that none of your other Dev Box tunnels (those described as
+`SSH to <computer>`) use; `-Port` overrides it. Setup refuses a tunnel that
+another computer owns, so a typo in `-Name` cannot take over another box
+(`-Force` moves it deliberately), and it removes extra ports from the tunnel,
+because clients would forward those too. Renaming a box with `-Name` deletes its
+previous tunnel. Tunnel IDs are global, so choose another name if creation fails.
+
 `authorized_keys` is private and never overwritten: edit it directly or add keys
-with `-AuthorizedKeysFile`. `-TunnelId` and `-Port` override the defaults; tunnel
-IDs are global, so choose another if creation fails. Rerunning is safe. When the
-config, supervisor or task changes, it restarts `sshd` and the tunnel host, which
-drops SSH sessions open through the tunnel. `-Apply` prints the host key
-fingerprint to check on the client's first connection.
+with `-AuthorizedKeysFile`. Rerunning is safe. When the config, supervisor or
+task changes, it restarts `sshd` and the tunnel host, which drops SSH sessions
+open through the tunnel. `-Apply` prints the host key fingerprint to check on
+the client's first connection, and the Mac command that adds the box.
 
 - It only works while you have a logon session. Disconnecting from the desktop
   is fine; after a restart, sign in once.
-- A new Dev Box has a new host key, so remove the old entry on the client
-  (`ssh-keygen -R <name>`). Host each tunnel ID from one machine at a time.
+- A rebuilt Dev Box has a new host key; on a Mac, `devbox-add --remove <name>`
+  then `devbox-add <name>`.
+- Run setup from the desktop, not over SSH: SSH sessions cannot start
+  `devtunnel.exe` through WinGet's unelevated link, and the restart would drop
+  the session running it.
 - `ssh <name> 'command'` relies on the profile skipping PSReadLine when stdin is
   redirected; otherwise PowerShell never exits.
 

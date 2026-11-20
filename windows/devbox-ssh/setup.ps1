@@ -10,13 +10,17 @@
     that only the user's account can connect to carries the traffic. See windows/README.md.
 
     Previews by default. -Apply makes the changes, prompting for elevation once if needed.
+
+    -Name names this Dev Box (e.g. jasonrobert-8) and is also its tunnel ID; the first setup needs
+    it, later runs reuse the installed name and port. New boxes get the lowest port from 2222 that
+    none of your other Dev Box tunnels use, so each box keeps its own local port on clients.
 #>
 [CmdletBinding()]
 param(
     [switch] $Apply,
     [switch] $Uninstall,
-    [string] $TunnelId,
-    [ValidateRange(1024, 65535)][int] $Port = 2222,
+    [Alias('TunnelId')][string] $Name,
+    [ValidateRange(1024, 65535)][int] $Port,
     [string] $AuthorizedKeysFile,
     [switch] $Force,
     [string] $HomePath = $env:USERPROFILE,
@@ -34,12 +38,6 @@ if (-not $HomePath -or -not [IO.Path]::IsPathFullyQualified($HomePath)) {
     throw "Expected an absolute Windows path: '$HomePath'"
 }
 $HomePath = $HomePath.TrimEnd('\')
-if (-not $TunnelId) {
-    $TunnelId = ($env:USERNAME.ToLowerInvariant() -replace '[^a-z0-9-]', '-') + '-devbox'
-}
-if ($TunnelId -cnotmatch '^[a-z0-9][a-z0-9-]{1,58}[a-z0-9](\.[a-z0-9]+)?$') {
-    throw "Invalid tunnel ID '$TunnelId': use lowercase letters, digits and hyphens."
-}
 if (-not $DevTunnelPath) {
     $found = Get-Command devtunnel -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     $DevTunnelPath = if ($found) { $found.Source } else { Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links\devtunnel.exe' }
@@ -62,6 +60,23 @@ $bootstrapLinks = @((Join-Path $env:LOCALAPPDATA 'nvim'), (Join-Path $HomePath '
 $userSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $privateSids = @($userSid, 'S-1-5-18', 'S-1-5-32-544')
 if (-not $TaskUser) { $TaskUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name }
+
+# Reruns keep the installed name and port unless they are given.
+$task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+$installedTunnel = if ($task -and @($task.Actions)[0].Arguments -match '-TunnelId\s+(\S+)') { $Matches[1] } else { $null }
+if (-not $Name) { $Name = $installedTunnel }
+if (-not $Name -and -not $Uninstall) {
+    throw "Name this Dev Box on its first setup, e.g. -Name $($env:USERNAME.ToLowerInvariant())-8. The name is also its tunnel ID."
+}
+if ($Name -and $Name -cnotmatch '^[a-z0-9][a-z0-9-]{1,58}[a-z0-9](\.[a-z0-9]+)?$') {
+    throw "Invalid name '$Name': use lowercase letters, digits and hyphens."
+}
+$TunnelId = $Name
+if (-not $Port -and (Test-Path -LiteralPath $sshdConfig) -and
+    (Get-Content -LiteralPath $sshdConfig -Raw) -match '(?m)^Port\s+(\d+)') { $Port = [int] $Matches[1] }
+# Without an installed port, the tunnel or the free-port search picks one once dev tunnels is usable.
+$portPending = -not $Port
+if ($portPending) { $Port = 2222 }
 
 function Get-TaskArguments {
     "--headless `"$pwshExe`" -NoProfile -ExecutionPolicy Bypass -File `"$supervisor`" " +
@@ -248,16 +263,68 @@ function Test-DevTunnelLogin {
     (& $DevTunnelPath user show 2>&1 | Out-String) -match 'Logged in as'
 }
 
+# The tunnel's details from `devtunnel show -j`, or $null if it does not exist.
+function Get-Tunnel([string] $Id) {
+    $json = & $DevTunnelPath show $Id -j 2>$null | Out-String
+    if ($LASTEXITCODE -ne 0) { return $null }
+    try { ($json | ConvertFrom-Json).tunnel } catch { $null }
+}
+
+function Get-TunnelPort($Tunnel) {
+    if (-not $Tunnel -or -not $Tunnel.PSObject.Properties['ports']) { return @() }
+    @($Tunnel.ports | ForEach-Object portNumber)
+}
+
+# setup.ps1 describes each tunnel as "SSH to <computer>"; another computer's name means another box.
+function Get-TunnelOwner($Tunnel) {
+    if ($Tunnel -and $Tunnel.PSObject.Properties['description'] -and $Tunnel.description -match '^SSH to (\S+)$') {
+        return $Matches[1]
+    }
+}
+
+# The tunnel's own port, else the lowest port from 2222 that no other Dev Box tunnel uses, so
+# clients forwarding several boxes always get the same local port for each.
+function Resolve-TunnelPort($Tunnel) {
+    $own = @(Get-TunnelPort $Tunnel)
+    if ($own) { return $own[0] }
+    $list = & $DevTunnelPath list -j 2>$null | Out-String
+    $tunnels = if ($LASTEXITCODE -eq 0) { try { @(($list | ConvertFrom-Json).tunnels) } catch { @() } } else { @() }
+    $used = foreach ($other in $tunnels) {
+        $id = $other.tunnelId -replace '\.[a-z0-9]+$'
+        if ($id -eq ($TunnelId -replace '\.[a-z0-9]+$') -or -not (Get-TunnelOwner $other)) { continue }
+        Get-TunnelPort (Get-Tunnel $other.tunnelId)
+    }
+    $candidate = 2222
+    while ($candidate -in $used) { $candidate++ }
+    $candidate
+}
+
+# Plans the tunnel changes; refuses to take over another computer's tunnel unless -Force.
+function Get-TunnelPlan {
+    $tunnel = Get-Tunnel $TunnelId
+    $owner = Get-TunnelOwner $tunnel
+    if ($owner -and $owner -ne $env:COMPUTERNAME -and -not $Force) {
+        throw "Tunnel '$TunnelId' belongs to $owner. Choose another -Name, or -Force to move it to this computer."
+    }
+    if ($portPending) { $script:Port = Resolve-TunnelPort $tunnel; $script:portPending = $false }
+    $ports = @(Get-TunnelPort $tunnel)
+    $changes = @()
+    if (-not $tunnel) { $changes += "create tunnel $TunnelId" }
+    elseif ($owner -ne $env:COMPUTERNAME) { $changes += "describe tunnel $TunnelId as this computer's" }
+    if ($Port -notin $ports) { $changes += "add port $Port to tunnel $TunnelId" }
+    $extra = @($ports | Where-Object { $_ -ne $Port })
+    if ($extra) { $changes += "remove port(s) $($extra -join ', ') from tunnel $TunnelId (clients would forward them too)" }
+    $changes
+}
+
 $plan = [Collections.Generic.List[object]]::new()
 function Add-Step([string] $Kind, [string] $Name, [string] $Text) {
     $plan.Add([pscustomobject]@{ Kind = $Kind; Name = $Name; Text = $Text })
 }
 function Test-Planned([string] $Name) { [bool]($plan | Where-Object Name -EQ $Name) }
 
-$task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-# Include the registered task's tunnel so changing -TunnelId also stops the old host.
-$tunnelIds = @($TunnelId)
-if ($task -and @($task.Actions)[0].Arguments -match '-TunnelId\s+(\S+)') { $tunnelIds += $Matches[1] }
+# Include the registered task's tunnel so changing -Name also stops the old host.
+$tunnelIds = @($TunnelId, $installedTunnel) | Where-Object { $_ }
 $parts = Get-RunningPart
 $generated = @()
 if (Test-Path -LiteralPath $stateDir) {
@@ -301,23 +368,21 @@ else {
             ($untrustedLinks -join ', '))
     }
 
+    $portNote = if ($portPending) { 'a free port from 2222' } else { "port $Port" }
     if (-not (Test-Path -LiteralPath $DevTunnelPath -PathType Leaf)) {
         Add-Step User InstallDevTunnel 'install the devtunnel CLI (winget, user scope)'
         Add-Step User Login 'sign in to dev tunnels'
-        Add-Step User EnsureTunnel "create tunnel $TunnelId with port $Port if missing"
+        Add-Step User EnsureTunnel "create tunnel $TunnelId with $portNote if missing"
     }
     elseif (-not (Test-DevTunnelLogin)) {
         Add-Step User Login 'sign in to dev tunnels'
-        Add-Step User EnsureTunnel "create tunnel $TunnelId with port $Port if missing"
+        Add-Step User EnsureTunnel "create tunnel $TunnelId with $portNote if missing"
     }
     else {
-        & $DevTunnelPath show $TunnelId *> $null
-        if ($LASTEXITCODE -ne 0) {
-            Add-Step User EnsureTunnel "create tunnel $TunnelId with port $Port"
-        }
-        else {
-            & $DevTunnelPath port show $TunnelId -p $Port *> $null
-            if ($LASTEXITCODE -ne 0) { Add-Step User EnsureTunnel "add port $Port to tunnel $TunnelId" }
+        $tunnelChanges = @(Get-TunnelPlan)
+        if ($tunnelChanges) { Add-Step User EnsureTunnel ($tunnelChanges -join '; ') }
+        if ($installedTunnel -and $installedTunnel -ne $TunnelId -and (Get-Tunnel $installedTunnel)) {
+            Add-Step User DeleteOldTunnel "delete the previous tunnel $installedTunnel"
         }
     }
 
@@ -375,7 +440,8 @@ if ($Uninstall) {
     if (Test-Planned StopParts) { Stop-RunningPart (Get-RunningPart) }
     if (Test-Planned RemoveFiles) { $generated | Remove-Item -Force }
     Write-Host "Uninstalled. Left in place: the OpenSSH Server capability (its service stays disabled), the OpenSSH"
-    Write-Host "default shell, $authorizedKeys, and tunnel $TunnelId (remove it with: devtunnel delete $TunnelId)."
+    $tunnelNote = if ($TunnelId) { ", and tunnel $TunnelId (remove it with: devtunnel delete $TunnelId)" } else { '' }
+    Write-Host "default shell and $authorizedKeys$tunnelNote."
     return
 }
 
@@ -392,13 +458,23 @@ if (Test-Planned Login) {
     if (-not (Test-DevTunnelLogin)) { throw 'Not signed in to dev tunnels; run: devtunnel user login' }
 }
 if (Test-Planned EnsureTunnel) {
-    & $DevTunnelPath show $TunnelId *> $null
-    if ($LASTEXITCODE -ne 0) {
+    $null = Get-TunnelPlan  # re-checks ownership and resolves the port after a fresh sign-in
+    $config = Get-SshdConfig
+    $tunnel = Get-Tunnel $TunnelId
+    if (-not $tunnel) {
         & $DevTunnelPath create $TunnelId --expiration 30d -d "SSH to $env:COMPUTERNAME" | Out-Host
-        if ($LASTEXITCODE -ne 0) { throw "Could not create tunnel '$TunnelId'. IDs are global; choose another with -TunnelId." }
+        if ($LASTEXITCODE -ne 0) { throw "Could not create tunnel '$TunnelId'. IDs are global; choose another -Name." }
     }
-    & $DevTunnelPath port show $TunnelId -p $Port *> $null
-    if ($LASTEXITCODE -ne 0) {
+    elseif ((Get-TunnelOwner $tunnel) -ne $env:COMPUTERNAME) {
+        & $DevTunnelPath update $TunnelId -d "SSH to $env:COMPUTERNAME" | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "Could not update tunnel '$TunnelId'." }
+    }
+    $ports = @(Get-TunnelPort $tunnel)
+    foreach ($extra in @($ports | Where-Object { $_ -ne $Port })) {
+        & $DevTunnelPath port delete $TunnelId -p $extra | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "Could not remove port $extra from tunnel '$TunnelId'." }
+    }
+    if ($Port -notin $ports) {
         & $DevTunnelPath port create $TunnelId -p $Port | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "Could not add port $Port to tunnel '$TunnelId'." }
     }
@@ -436,10 +512,15 @@ if (Test-Planned Start) {
     if (-not $parts.Sshd) { throw 'sshd did not start; check Event Viewer > Applications and Services > OpenSSH.' }
     if (-not $parts.Tunnel) { throw "devtunnel host did not start; see $stateDir\devtunnel.err.log." }
 }
+if (Test-Planned DeleteOldTunnel) {
+    & $DevTunnelPath delete $installedTunnel -f | Out-Host
+    if ($LASTEXITCODE -ne 0) { Write-Warning "Could not delete tunnel '$installedTunnel'; remove it with: devtunnel delete $installedTunnel" }
+}
 
 Write-Host "`nReady: SSH as $TaskUser through tunnel $TunnelId (port $Port)."
 Write-Host "Host key: $(& "$openSsh\ssh-keygen.exe" -l -f "$hostKey.pub")"
 if (-not (Get-KeyLine $authorizedKeys)) {
     Write-Warning "No client keys yet. Add public keys to $authorizedKeys or re-run with -AuthorizedKeysFile."
 }
-Write-Host 'Client setup: see "SSH over dev tunnels (macOS)" in the dotfiles README.'
+Write-Host "Client setup (macOS, dotfiles): devbox-add $TunnelId"
+Write-Host 'Details: "SSH over dev tunnels (macOS)" in the dotfiles README.'

@@ -212,6 +212,25 @@
                 python3 -m unittest discover -s ${./tests} -p 'test_copilot.py'
                 touch "$out"
               '';
+          devbox =
+            let
+              devbox = import ./modules/devbox-packages.nix {
+                inherit pkgs;
+                forwardPath = "/nonexistent/devtunnel-forward";
+              };
+            in
+            pkgs.runCommand "devbox"
+              {
+                nativeBuildInputs = [ pkgs.python3 ];
+                __darwinAllowLocalNetworking = true;
+              }
+              ''
+                export DOTFILES_DEVBOX_ADD=${lib.getExe devbox.devboxAdd}
+                export DOTFILES_DEVTUNNEL_FORWARD=${lib.getExe devbox.devtunnelForward}
+                export PYTHONDONTWRITEBYTECODE=1
+                python3 -m unittest discover -s ${./tests} -p 'test_devbox.py'
+                touch "$out"
+              '';
           migration =
             pkgs.runCommand "migration"
               {
