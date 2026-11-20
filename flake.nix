@@ -207,6 +207,7 @@
               ''
                 export DOTFILES_COPILOT_STATUSLINE=${lib.getExe copilot.statusLine}
                 export DOTFILES_COPILOT_MERGE_SETTINGS=${lib.getExe copilot.mergeSettings}
+                export DOTFILES_COPILOT_SESSION_TOOLS=${copilot.sessionTools}/bin
                 export PYTHONDONTWRITEBYTECODE=1
                 python3 -m unittest discover -s ${./tests} -p 'test_copilot.py'
                 touch "$out"

@@ -99,6 +99,7 @@ in
     p = "_dotfiles_copilot -sp";
     a = "env -u TMUX agency copilot --yolo";
     ao = "env -u TMUX agency copilot --yolo --model claude-opus-5.5 --reasoning-effort high --context long_context";
+    sb = "session-browser";
   };
 
   home.sessionPath = map (path: "${config.home.homeDirectory}/${path}") [
@@ -118,7 +119,7 @@ in
     MANPAGER = "sh -c 'col -bx | ${bat} --language=man --plain'";
     # Keep groff's formatting escapes out of the text bat highlights.
     MANROFFOPT = "-c";
-    # terminal-tools session browser: resume the way the `a` alias launches.
+    # session-browser (modules/copilot.nix): resume the way the `a` alias launches.
     SESSION_BROWSER_RESUME_CMD = "env -u TMUX agency copilot --yolo --resume=";
   };
 

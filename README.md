@@ -35,6 +35,7 @@ containing it first.
 | SSH server (Dev Box) | `windows/devbox-ssh/` | Opt-in user-mode `sshd` behind a dev tunnel ([Windows steps](windows/README.md#ssh-into-a-dev-box)) |
 | Windows Terminal and PowerShell | `windows/` | Backed-up, explicit Windows deployment |
 | Copilot CLI status line | `modules/copilot.nix`, `copilot/` | `~/.copilot/statusline.sh`; only the `statusLine` keys are merged into Copilot's writable `settings.json` |
+| Copilot session browser and tags | `modules/copilot-packages.nix`, `copilot/session-*.sh` | `session-browser` (alias `sb`) and `session-tags` on PATH; tags in `~/.local/state/session-browser/tags.db` |
 
 Machines still using the old manual Bash, Zsh, or tmux symlinks must run the
 [migration](#wsl--linux--macos-migration) before pulling past the removal of
@@ -67,6 +68,7 @@ and `Cmd+0` resets the font size.
 | `Ctrl-R` | Search shell history with Atuin |
 | `Ctrl-T` / `Alt-C` | Fuzzy-insert a file path / cd into a directory |
 | `, <cmd>` | Run any nixpkgs program without installing it |
+| `sb [term]` | Browse, search, tag and resume Copilot CLI sessions with fzf (`?` lists its keys) |
 
 **tmux** keys (`prefix s` sessions, `prefix f` windows, `prefix g` lazygit, and
 more) are in [`tmux/README.md`](tmux/README.md#highlights). **Neovim** keys

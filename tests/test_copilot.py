@@ -10,6 +10,7 @@ import unittest
 
 STATUSLINE = os.environ.get("DOTFILES_COPILOT_STATUSLINE")
 MERGE = os.environ.get("DOTFILES_COPILOT_MERGE_SETTINGS")
+SESSION_TOOLS = os.environ.get("DOTFILES_COPILOT_SESSION_TOOLS")
 
 
 class Temp(unittest.TestCase):
@@ -73,6 +74,31 @@ class MergeSettingsTests(Temp):
         result = self.merge({"statusLine": {"command": "c"}})
         self.assertIn("isn't valid JSON", result.stderr)
         self.assertEqual(self.settings.read_text(), "{ // comment\n}")
+
+
+@unittest.skipUnless(SESSION_TOOLS, "DOTFILES_COPILOT_SESSION_TOOLS must name the built bin dir (nix flake check sets it)")
+class SessionToolsTests(Temp):
+    def run_tool(self, *args, **env):
+        # A bare PATH: the wrappers must supply sqlite3 and each other.
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(self.root), "COPILOT_HOME": str(self.root / "copilot"),
+               "SESSION_TAGS_DB": str(self.root / "tags.db"), **env}
+        return subprocess.run([str(Path(SESSION_TOOLS) / args[0]), *args[1:]], env=env,
+                              capture_output=True, text=True, check=True).stdout
+
+    def tags(self, session):
+        return self.run_tool("session-tags", "ls", "-s", session).split()
+
+    def test_browser_toggles_tags_through_session_tags(self):
+        pick = self.root / "pick"
+        pick.write_text("abc-1\nabc-2\n")
+        self.run_tool("session-tags", "add", "-s", "abc-1", "x")
+        self.run_tool("session-browser", "--tag-toggle", "x", SESSION_BROWSER_PICK_FILE=str(pick))
+        self.assertEqual((self.tags("abc-1"), self.tags("abc-2")), (["x"], ["x"]))
+        self.run_tool("session-browser", "--tag-toggle", "x", SESSION_BROWSER_PICK_FILE=str(pick))
+        self.assertEqual((self.tags("abc-1"), self.tags("abc-2")), ([], []))
+
+    def test_help_comes_from_the_script_not_the_wrapper(self):
+        self.assertIn("Usage: session-tags <command>", self.run_tool("session-tags", "--help"))
 
 
 if __name__ == "__main__":

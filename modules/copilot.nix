@@ -5,7 +5,7 @@
   ...
 }:
 let
-  inherit (import ./copilot-packages.nix pkgs) statusLine mergeSettings;
+  inherit (import ./copilot-packages.nix pkgs) statusLine mergeSettings sessionTools;
 
   # The only settings.json keys Nix owns; Copilot keeps writing the rest.
   settings = {
@@ -17,6 +17,8 @@ let
   };
 in
 {
+  home.packages = [ sessionTools ];
+
   home.file.".copilot/statusline.sh" = {
     source = lib.getExe statusLine;
     # Replaces the hand-written script from before this module.
