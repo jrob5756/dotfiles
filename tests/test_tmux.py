@@ -171,11 +171,17 @@ class AgentStatusTests(unittest.TestCase):
         window_format = re.search(r"(?m)^\s*setw -g window-status-format '(.*)'$", text).group(1)
         event = lambda kind, extra="": f'{{"type":"{kind}","data":{{{extra}}}}}'
         working = [event("user.message"), event("assistant.turn_start")]
+        background = lambda shell: event("tool.execution_complete",
+                                         f'"result":{{"content":"<command started in background with shellId: {shell}>"}}')
+        finished = [event("assistant.turn_end"), event("session.usage_checkpoint")]
         logs = {
             "working": working,
             "working2": working,
             "input": [event("assistant.turn_start"), event("tool.execution_start", '"toolName":"ask_user"')],
-            "idle": [event("assistant.turn_end"), event("session.usage_checkpoint")],
+            # Finished turns, but one still waits on a background shell.
+            "waiting": [background("build"), *finished],
+            "idle": [background("tests"), *finished,
+                     event("system.notification", '"kind":{"type":"shell_completed","shellId":"tests"}'), *finished],
         }
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -200,14 +206,14 @@ class AgentStatusTests(unittest.TestCase):
             try:
                 tmux("-f", "/dev/null", "new-session", "-d", "-s", "dev", "-x", "80", "-y", "24", "sleep 60")
                 tmux("setw", "-g", "window-status-format", window_format)
-                windows = {name: agent(name, "new-window", "-t", "dev:") for name in ("working", "input", "idle")}
+                windows = {name: agent(name, "new-window", "-t", "dev:") for name in ("working", "input", "waiting", "idle")}
                 agent("working2", "split-window", "-t", windows["working"])
 
                 def badges():
                     subprocess.run([script], env=env, check=True)
                     return {name: tmux("show", "-wqv", "-t", window, "@agent") for name, window in windows.items()}
 
-                expected = {"working": "working", "input": "input", "idle": ""}
+                expected = {"working": "working", "input": "input", "waiting": "working", "idle": ""}
                 for _ in range(50):
                     if badges() == expected:
                         break
@@ -223,7 +229,7 @@ class AgentStatusTests(unittest.TestCase):
                 summary = re.search(r"(?m)^\s*set -g status-right '#\(\S+\)(.*?)#\[fg=#f9e2af\]#\{\?window_zoomed", text).group(1)
                 tmux("set", "-g", "status-right", summary)
                 self.assertEqual(re.sub(r"#\[[^]]*\]", "", tmux("display", "-p", "#{E:status-right}")),
-                                 "agents ?1 ●2 ○1 │")
+                                 "agents ?1 ●3 ○1 │")
 
                 # Finishing after the window was last viewed shows as done.
                 later = time.time() + 60

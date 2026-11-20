@@ -33,13 +33,47 @@ fi
 
 mtime() { date -r "$1" +%s 2>/dev/null || echo 0; }
 
+# Whether a session is waiting on background shells or agents: an interaction
+# that ends while they run looks finished in the log until their completion
+# notification starts the next turn. Tracks the IDs that tool results report as
+# backgrounded until a notification, stop_bash or read reports them done. Reads
+# a bounded tail since logs grow to ~100 MB; subagents' own work is excluded.
+waiting() {
+  tail -c 4000000 "$1" |
+    grep -E '^\{"type":"(tool\.execution_complete|system\.notification|session\.(start|resume|shutdown))"' |
+    grep -vF '},"agentId":"' |
+    awk '
+      function track(re, group, add,   m) {
+        if (match($0, re, m)) {
+          if (add) pending[m[group]] = 1
+          else delete pending[m[group]]
+        }
+      }
+      /^\{"type":"session\./ { delete pending; next }
+      {
+        # Detached shells are long-lived services nobody waits on.
+        track("\"content\":\"<command started in background with shellId: ([^>\"]+)>\"", 1, 1)
+        # A sync shell that timed out or that the user moved to the background.
+        track("<command with shellId: ([^ \"\\\\]+) [^\"\\\\]*>\"", 1, 1)
+        track("\"content\":\"[^\"]{0,20}(started in background with agent_id: |moved to background \\(agent_id: )([^.,) \"]+)", 2, 1)
+        track("\"content\":\"Message delivered to agent ([^. \"]+)\\.", 1, 1)
+        track("\"content\":\"Agent [^\"]*agent_id: ([^,\"]+), agent_type: [^,\"]*, status: running", 1, 1)
+        track("<shellId: ([^ \"]+) completed with exit code -?[0-9]+>\"", 1, 0)
+        track("\"content\":\"<command with id: ([^ \"]+) stopped>\"", 1, 0)
+        track("\"content\":\"Agent [^\"]*agent_id: ([^,\"]+), agent_type: [^,\"]*, status: (idle|completed|failed|cancelled)", 1, 0)
+        track("\"kind\":\\{\"type\":\"(shell_completed|agent_idle|agent_completed)\",\"(shellId|agentId)\":\"([^\"]+)\"", 3, 0)
+      }
+      END { exit length(pending) == 0 }'
+}
+
 # A session's state from the tail of its event log. An interaction ends with
 # assistant.turn_end then session.usage_checkpoint; a bare turn_end is only the
-# gap between two model turns unless nothing follows for a while.
+# gap between two model turns unless nothing follows for a while. An agent
+# waiting on background shells or agents counts as working.
 session_state() {
-  local log="$state_dir/$1/events.jsonl"
+  local log="$state_dir/$1/events.jsonl" state
   [ -f "$log" ] || { echo idle; return; }
-  tail -n 300 "$log" | awk -v age="$((now - $(mtime "$log")))" '
+  state=$(tail -n 300 "$log" | awk -v age="$((now - $(mtime "$log")))" '
     { t = $0; sub(/^\{"type":"/, "", t); sub(/".*/, "", t) }
     t == "tool.execution_start" && /"toolName":"ask_user"/ { ask = 1; last = "working"; next }
     t == "human_response.recorded" || (t == "tool.execution_complete" && ask) { ask = 0 }
@@ -53,7 +87,11 @@ session_state() {
       if (ask || perm) print "input"
       else if (last == "turn_end") print (age > 10) ? "idle" : "working"
       else print (last == "") ? "idle" : last
-    }'
+    }')
+  if [ "$state" = idle ] && waiting "$log"; then
+    state=working
+  fi
+  echo "$state"
 }
 
 session_name() {
