@@ -1,3 +1,4 @@
+import ctypes
 import os
 from pathlib import Path
 import shutil
@@ -73,6 +74,10 @@ class DevBoxSshPreviewTests(unittest.TestCase):
         result = self.invoke(env={"LOCALAPPDATA": str(self.home)})
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         steps = [line for line in result.stdout.splitlines() if "follow them" in line]
+        # Links created elevated (as on CI runners) are trusted, so there is nothing to re-create.
+        if ctypes.windll.shell32.IsUserAnAdmin():
+            self.assertEqual(steps, [], result.stdout)
+            return
         self.assertEqual(len(steps), 1, result.stdout)
         self.assertIn(str(config / "starship.toml"), steps[0])
         self.assertNotIn(str(self.home / "nvim"), steps[0])

@@ -25,13 +25,27 @@ pkgs: {
       for name in session-browser session-tags; do
         install -Dm755 ${../copilot}/$name.sh $out/libexec/$name
         makeWrapper $out/libexec/$name $out/bin/$name --prefix PATH : ${
-          pkgs.lib.makeBinPath [
-            (placeholder "out")
-            pkgs.fzf
-            pkgs.jq
-            pkgs.sqlite
-            pkgs.tmux
-          ]
+          pkgs.lib.makeBinPath (
+            [
+              (placeholder "out")
+              pkgs.coreutils
+              pkgs.fzf
+              pkgs.gawk
+              pkgs.gnugrep
+              pkgs.gnused
+              pkgs.gnutar
+              pkgs.gzip
+              pkgs.jq
+              pkgs.lsof
+              pkgs.sqlite
+              pkgs.tmux
+            ]
+            # macOS's own ps and uuidgen are used there (and pbcopy for copying).
+            ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+              pkgs.procps
+              pkgs.util-linux
+            ]
+          )
         }
       done
       runHook postInstall
