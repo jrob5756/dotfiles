@@ -358,7 +358,15 @@ in
     sensibleOnTop = false;
 
     plugins = with pkgs.tmuxPlugins; [
-      vim-tmux-navigator
+      {
+        plugin = vim-tmux-navigator;
+        # Also hand C-h/j/k/l to Neovim running over SSH, which titles the pane
+        # "<file> - Nvim". The title comes from the remote host, so it is only
+        # tested by tmux's matcher; the shell sees 1 or 0, never the title.
+        extraConfig = ''
+          set -g @vim_navigator_check '[ "#{m/i:* - Nvim,#{pane_title}}" = 1 ] || ps -o state= -o comm= -t "#{pane_tty}" | grep -iqE "^[^TXZ ]+ +@vim_navigator_pattern$"'
+        '';
+      }
       {
         # prefix F: hint-label SHAs, paths, URLs, IPs and similar on screen;
         # typing a hint copies it. Copying goes through tmux, so set-clipboard

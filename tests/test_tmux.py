@@ -104,6 +104,48 @@ class TmuxTests(unittest.TestCase):
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+@unittest.skipUnless(shutil.which("tmux") and shutil.which("bash") and MANAGED, "tmux, bash and DOTFILES_TMUX_CONFIG are required")
+class NavigatorTests(unittest.TestCase):
+    def test_ctrl_hjkl_reach_neovim_over_ssh_without_running_its_title(self):
+        source = Path(MANAGED).read_text()
+        navigator = re.search(r"(?m)^\s*run(?:-shell)?\s+(\S*vim-tmux-navigator\.tmux)\s*$", source).group(1)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            socket = root / "socket"
+            config = root / "tmux.conf"
+            # No plugin launcher runs, so nothing restores or saves real sessions.
+            config.write_text(re.sub(r"(?m)^\s*run(?:-shell)?\s+.*$", "", source))
+            env = {**os.environ, "HOME": str(root), "TMUX": ""}
+
+            def tmux(*args):
+                return subprocess.run(["tmux", "-S", str(socket), *args], env=env,
+                                      text=True, capture_output=True, check=True).stdout.strip()
+
+            try:
+                tmux("-f", str(config), "new-session", "-d", "-s", "dev", "sleep 60")
+                # Bash runs the plugin because its /usr/bin/env shebang fails in the build sandbox.
+                subprocess.run([shutil.which("bash"), navigator], env={**env, "TMUX": f"{socket},0,0"},
+                               check=True)
+                binding = next(line for line in tmux("list-keys", "-T", "root").splitlines()
+                               if re.match(r"bind-key\s+-T root C-h\s", line))
+                words = shlex.split(binding)
+                check = words[words.index("if-shell") + 1]
+                self.assertEqual(words[-2:], ["send-keys 'C-h'", "select-pane -L"])
+
+                def passes_through(title):
+                    tmux("select-pane", "-t", "dev", "-T", title)
+                    expanded = tmux("display-message", "-p", "-t", "dev", check)
+                    return subprocess.run(["sh", "-c", expanded], cwd=root, env=env).returncode == 0
+
+                self.assertTrue(passes_through("init.lua (~/src) - Nvim"))
+                self.assertFalse(passes_through("C:\\Windows\\system32\\conhost.exe"))
+                self.assertFalse(passes_through("x\"; touch pwned; \"' ; touch pwned ; ' - Nvim-not"))
+                self.assertFalse((root / "pwned").exists())
+            finally:
+                subprocess.run(["tmux", "-S", str(socket), "kill-server"], env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 @unittest.skipUnless(shutil.which("tmux") and MANAGED, "tmux and DOTFILES_TMUX_CONFIG are required")
 class CopilotResumeTests(unittest.TestCase):
     def test_save_hook_pins_copilot_panes_to_their_sessions(self):

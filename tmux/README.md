@@ -83,4 +83,5 @@ Caveats worth knowing:
 ## Notes
 
 - `vim-tmux-navigator` takes over `Ctrl-l`, so the shell's clear-screen moves to **`prefix Ctrl-l`**.
+- Over SSH the pane runs `ssh`, not Neovim, so the keys also pass through when the pane title ends in ` - Nvim`, which Neovim sets on the remote machine. There they move between that Neovim's splits only; leave the pane with `prefix` + arrow keys.
 - `vim-tmux-navigator` requires the matching side to be set up in Neovim too (a plugin, not just the `<C-h/j/k/l>` mappings already in `nvim/lua/plugins/astrocore.lua`) for the pane-vs-split detection to work perfectly. If `<C-h/j/k/l>` ever stops crossing between tmux and Neovim seamlessly, that's the first thing to check.
